@@ -1,0 +1,2 @@
+# ShizukuBot-plugins
+本仓库是ShizukuBot框架的一些插件合集，基本都是一些我感兴趣的插件
