@@ -3,6 +3,7 @@ package antiabuse
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -36,8 +37,10 @@ func TestDefinition(t *testing.T) {
 	if err := d.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if !d.Manifest.Allows("state.read") || !d.Manifest.Allows("state.write") {
-		t.Fatal(d.Manifest.Permissions)
+	for _, p := range []string{"state.read", "state.write", "message.recall", "group.manage"} {
+		if !d.Manifest.Allows(p) {
+			t.Fatalf("missing permission %s: %v", p, d.Manifest.Permissions)
+		}
 	}
 }
 
@@ -45,6 +48,48 @@ func TestDefaultWordDetected(t *testing.T) {
 	got, replied := call(t, memState{}, sdk.Event{GroupID: "g", Message: "你这个傻逼"})
 	if !replied || !strings.Contains(got, "傻逼") || !strings.Contains(got, "违禁词") {
 		t.Fatalf("reply = %q, replied = %v", got, replied)
+	}
+}
+
+func TestDefaultWordRecallsAndMutes(t *testing.T) {
+	var actions []sdk.Action
+	event := sdk.Event{
+		GroupID:   "g",
+		UserID:    "member",
+		MessageID: "msg",
+		Message:   "你这个傻逼",
+		Act: func(_ context.Context, a sdk.Action) error {
+			actions = append(actions, a)
+			return nil
+		},
+	}
+	reply, _ := call(t, memState{}, event)
+	if len(actions) != 2 {
+		t.Fatalf("actions = %+v", actions)
+	}
+	if actions[0].Kind != sdk.ActionRecall || actions[0].MessageID != "msg" {
+		t.Fatalf("recall = %+v", actions[0])
+	}
+	if actions[1].Kind != sdk.ActionMute || actions[1].UserID != "member" || actions[1].Seconds != 120 {
+		t.Fatalf("mute = %+v", actions[1])
+	}
+	if !strings.Contains(reply, "已撤回并禁言") {
+		t.Fatalf("reply = %q", reply)
+	}
+}
+
+func TestPunishFallsBackWhenHostDenies(t *testing.T) {
+	event := sdk.Event{
+		GroupID: "g",
+		UserID:  "member",
+		Message: "你这个傻逼",
+		Act: func(context.Context, sdk.Action) error {
+			return errors.New("denied")
+		},
+	}
+	reply, _ := call(t, memState{}, event)
+	if !strings.Contains(reply, "请注意言行") {
+		t.Fatalf("reply = %q", reply)
 	}
 }
 

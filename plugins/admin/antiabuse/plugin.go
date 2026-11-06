@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"shizukubot/sdk"
 )
@@ -14,6 +15,8 @@ const (
 	delPrefix  = "删除违禁词"
 	listPrefix = "查看违禁词"
 )
+
+const banDuration = 2 * time.Minute
 
 // defaultWords 是内嵌的小规模示例词表，检测时始终生效，且不能通过指令删除。
 var defaultWords = []string{"傻逼", "操你妈", "狗日的"}
@@ -28,13 +31,13 @@ func Definition() sdk.Definition {
 		ID:          "antiabuse",
 		Name:        "违禁词检测",
 		Version:     "1.0.0",
-		Description: "检测群消息中的违禁词；支持添加/删除/查看本群词表",
+		Description: "检测群消息中的违禁词，撤回并禁言 2 分钟；支持添加/删除/查看本群词表",
 	}, []sdk.EventType{sdk.GroupMessage, sdk.GroupAtMessage}, Handle,
-		sdk.WithPermissions("state.read", "state.write"))
+		sdk.WithPermissions("state.read", "state.write", "message.recall", "group.manage"))
 }
 
 // Handle detects abuse words before handling word-list commands.
-// 原插件依赖平台封禁/禁言/撤回能力，本框架没有对应接口，故仅回复提醒。
+// 命中后与上游一致：先撤回消息，再禁言 2 分钟；机器人缺少群管理员权限时降级为提醒。
 func Handle(ctx context.Context, c sdk.Call) error {
 	if c.Event.GroupID == "" {
 		return nil
@@ -54,10 +57,25 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	}
 	for _, word := range allWords(ctx, c) {
 		if word != "" && strings.Contains(strings.ToLower(text), strings.ToLower(word)) {
-			return c.Reply(ctx, "检测到违禁词「"+word+"」，请注意言行。")
+			return punish(ctx, c, word)
 		}
 	}
 	return nil
+}
+
+func punish(ctx context.Context, c sdk.Call, word string) error {
+	recallErr := c.Recall(ctx)
+	muteErr := c.Mute(ctx, banDuration)
+	switch {
+	case recallErr == nil && muteErr == nil:
+		return c.Reply(ctx, "检测到违禁词「"+word+"」，已撤回并禁言 2 分钟。")
+	case recallErr == nil:
+		return c.Reply(ctx, "检测到违禁词「"+word+"」，已撤回；禁言失败，请确认机器人是群管理员。")
+	case muteErr == nil:
+		return c.Reply(ctx, "检测到违禁词「"+word+"」，已禁言 2 分钟；撤回失败。")
+	default:
+		return c.Reply(ctx, "检测到违禁词「"+word+"」，请注意言行。")
+	}
 }
 
 func addWord(ctx context.Context, c sdk.Call, word string) error {

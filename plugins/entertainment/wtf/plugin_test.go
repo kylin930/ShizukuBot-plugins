@@ -73,6 +73,25 @@ func TestQuery(t *testing.T) {
 	}
 }
 
+func TestQueryUsesMentionedUser(t *testing.T) {
+	var escaped string
+	useServer(t, func(w http.ResponseWriter, r *http.Request) {
+		escaped = r.URL.EscapedPath()
+		_, _ = io.WriteString(w, `{"text":"结果","ok":true,"msg":""}`)
+	})
+	_, replied := reply(t, sdk.Event{
+		GroupID: "g",
+		UserID:  "sender",
+		Message: `查询鬼东西0 <qqbot-at-user id="TARGET" />`,
+	})
+	if !replied {
+		t.Fatal("query did not reply")
+	}
+	if escaped != "/mRIFuS/TARGET" {
+		t.Fatalf("request path = %q", escaped)
+	}
+}
+
 func TestQueryUpstreamFailure(t *testing.T) {
 	useServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{"text":"","ok":false,"msg":"参数错误"}`)

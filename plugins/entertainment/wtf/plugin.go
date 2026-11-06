@@ -125,12 +125,12 @@ func Definition() sdk.Definition {
 		ID:          "wtf",
 		Name:        "鬼东西",
 		Version:     "1.0.0",
-		Description: "发送「鬼东西列表」查看项目，发送「查询鬼东西N」以用户 ID 调用对应测试",
+		Description: "发送「鬼东西列表」查看项目，发送「查询鬼东西N」以被 @ 用户或用户 ID 调用对应测试",
 	}, sdk.MessageEvents, Handle)
 }
 
 // Handle 列表在群聊和私聊都可用；查询沿用上游的仅群聊限制。框架没有昵称，
-// 因此以用户 ID 作为输入，也不支持从 @ 消息取第二个人。
+// 因此优先使用被 @ 的成员 ID，其次使用发送者 ID 作为输入。
 func Handle(ctx context.Context, c sdk.Call) error {
 	text := sdk.Text(c.Event)
 	if sdk.MatchFull(text, "鬼东西列表") {
@@ -148,6 +148,9 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		return c.Reply(ctx, "没有这项内容！")
 	}
 	name := c.Event.UserID
+	if ids := sdk.MentionUserIDs(c.Event); len(ids) > 0 {
+		name = ids[0]
+	}
 	if name == "" {
 		name = "匿名"
 	}
