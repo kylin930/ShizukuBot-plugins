@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/License-Apache--2.0-blue" alt="Apache-2.0">
 </p>
 
-[框架仓库](https://github.com/kylin930/ShizukuBot) · [插件开发](https://github.com/kylin930/ShizukuBot/blob/main/docs/plugin-development.md) · [插件 SDK](https://github.com/kylin930/ShizukuBot/blob/main/docs/plugin-sdk.md) · [移植对照检查报告](移植对照检查报告.md)
+[框架仓库](https://github.com/kylin930/ShizukuBot) · [插件开发](https://github.com/kylin930/ShizukuBot/blob/main/docs/plugin-development.md) · [插件 SDK](https://github.com/kylin930/ShizukuBot/blob/main/docs/plugin-sdk.md) · [移植对照检查报告](porting-audit.md)
 
 </div>
 
@@ -46,7 +46,7 @@ ShizukuBot-plugins/
 │   └── triggercmd/     # 触发指令注册辅助
 ├── sources/            # 上游源码（本地参考，已被 .gitignore 排除）
 ├── go.mod              # replace shizukubot => ../shizukubot
-└── 移植对照检查报告.md
+└── porting-audit.md
 ```
 
 ## 快速使用
@@ -294,7 +294,7 @@ go test ./plugins/...
 ## 移植说明
 
 <details>
-<summary><b>D 档：纯逻辑 / 无密钥插件的降级</b></summary>
+<summary><b>纯逻辑 / 无密钥插件的降级</b></summary>
 
 这一批插件在上游都依赖图片素材、字体文件、第三方分词/绘图库或扫码登录，移植时按框架能力做了等价降级：
 
@@ -312,7 +312,7 @@ go test ./plugins/...
 </details>
 
 <details>
-<summary><b>E 档：公开 API 查询插件的功能对齐</b></summary>
+<summary><b>公开 API 查询插件的功能对齐</b></summary>
 
 这一批全部走公开 HTTP 接口，不需要私有密钥（个别平台需要免费开发者凭证）。出图统一使用 `sdk.RenderHTML` 渲染 HTML 卡片，失败时回退文本；远程图片下载后转 data URI 内嵌，避免 QQ 侧外链限制：
 
@@ -337,7 +337,7 @@ go test ./plugins/...
 </details>
 
 <details>
-<summary><b>F 档：图片 / 媒体处理插件</b></summary>
+<summary><b>图片 / 媒体处理插件</b></summary>
 
 | 插件 | 上游做法 | 本仓库做法 |
 |---|---|---|
@@ -352,7 +352,7 @@ go test ./plugins/...
 </details>
 
 <details>
-<summary><b>I 档：Koishi 上游移植插件</b></summary>
+<summary><b>Koishi 上游移植插件</b></summary>
 
 这一批来自 `koishi-shangxue-apps`，均按上游功能完整移植：
 
@@ -379,7 +379,7 @@ patina 的额外限制：
 </details>
 
 <details>
-<summary><b>J 档：独立上游移植插件</b></summary>
+<summary><b>独立上游移植插件</b></summary>
 
 | 插件 | 上游做法 | 本仓库做法 |
 |---|---|---|

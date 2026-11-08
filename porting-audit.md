@@ -4,7 +4,7 @@
 
 - 本仓库 `plugins/` 下 93 个 Go 插件，对照 `sources/` 中的 ZeroBot-Plugin、NanoBot-Plugin、Koishi（赏雪合集）、AstrBot、Yunzai / standalone 上游实现。
 - 本报告合并 5 份审计结果（娱乐上半、娱乐下半、查询、工具+llm、游戏/语音/聊天/管理），去重后逐条复核；不修改任何代码。
-- 93 个插件中，`entertainment/toutai` 不在五份审计范围（见 README J 档），`game/endfield` 由主代理另行核对且无明细条目；其余 91 个在五份明细中逐条比对。
+- 93 个插件中，`entertainment/toutai` 不在五份审计范围（见 README「独立上游移植插件」），`game/endfield` 由主代理另行核对且无明细条目；其余 91 个在五份明细中逐条比对。
 
 ## 方法与口径
 
@@ -202,7 +202,7 @@
 - **定时任务 / 主动推送**：`manager` 定时提醒（`manager.go:296-361`）；`gloryofkings` 群日报/战绩推送（`groupReport.js:74-81`、`gameRecordPush.js:188-192`）；`endfield` 公告/理智订阅/自动签到；`minecraftobserver` 改手动拉取。
 - **原始 OneBot API**：`manager` 群聊/私聊转发、翻牌、赞我、回应表情、精华（`manager.go:270-295,362-447,646-711`）；`crypter` face 段（`Z/crypter/main.go:39-40`）；`antiabuse` bot 级封禁。
 - **视频发送**：`yujn` 21 个视频指令（`Z/yujn/yujn.go:97`）；`bilibiliparse` 视频下载/总结（README 已注明）。
-- **历史群消息**：`wordcount` `热词` 的完整统计（README D 档）；`llm` 群聊总结只统计启动后消息。
+- **历史群消息**：`wordcount` `热词` 的完整统计（README「纯逻辑 / 无密钥插件的降级」）；`llm` 群聊总结只统计启动后消息。
 - **戳一戳 / 群文件事件 / 发送返回 messageId**：`chat` 戳一戳（`Z/chat/chat.go:41-56`）；`midicreate` 群文件互转；`toutai` 自动撤回。
 - **图片消息不能带 @/键盘**：`wife`、`omikuji` 等拆成两条消息；`poker/jandan/gloryofkings` 先发 Markdown 按钮再发图。
 
@@ -230,10 +230,10 @@
 
 **逐项核对无实质差异**：
 
-- `entertainment/idiom`（仅 2 条 P3）、`entertainment/kfccrazythursday`、`entertainment/pig`、`entertainment/tiangou`、`entertainment/toutai`（J 档）。
+- `entertainment/idiom`（仅 2 条 P3）、`entertainment/kfccrazythursday`、`entertainment/pig`、`entertainment/tiangou`、`entertainment/toutai`（独立上游移植插件）。
 - `query/dailynews`、`query/moyucalendar`、`query/weather`、`query/bilibiliparse`（限制已文档化）、`query/movies`（README 已注明最多 8 条）。
 - `tool/furrycode`、`image/gif`、`audio/alipayvoice`（仅新增金额校验）、`audio/huozi`、`audio/midicreate`（群文件事件已文档化）、`audio/music`（仅网易云已文档化）、`admin/sleepmanage`、`admin/status`（纯文本已文档化）。
-- `game/endfield`（主代理另行核对，README J 档）。
+- `game/endfield`（主代理另行核对，见 README「独立上游移植插件」）。
 
 **仅 P3 措辞/参数差异**：
 
