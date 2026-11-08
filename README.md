@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="shizukubot.svg" alt="ShizukuBot" width="120">
+
 # ShizukuBot-plugins
 
 **ShizukuBot 的插件合集**
