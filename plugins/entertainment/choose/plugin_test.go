@@ -11,7 +11,7 @@ import (
 func run(t *testing.T, message string) string {
 	t.Helper()
 	var got string
-	c := sdk.Call{Event: sdk.Event{Message: message, Reply: func(_ context.Context, r sdk.Reply) error {
+	c := sdk.Call{Event: sdk.Event{Nickname: "小明", Message: message, Reply: func(_ context.Context, r sdk.Reply) error {
 		got = r.Text
 		return nil
 	}}}
@@ -23,7 +23,7 @@ func run(t *testing.T, message string) string {
 
 func TestChoose(t *testing.T) {
 	got := run(t, "选择 可口可乐 还是 百事可乐")
-	for _, want := range []string{"1, 可口可乐", "2, 百事可乐", "你最终会选"} {
+	for _, want := range []string{"> 小明\n你的选项有:", "1, 可口可乐", "2, 百事可乐", "你最终会选"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("reply missing %q: %q", want, got)
 		}

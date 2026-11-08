@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>王者营地在线状态</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      width: 1050px;
+      padding: 40px;
+      color: #fff;
+      background: linear-gradient(160deg, #0f1420 0%, #1a2133 100%);
+      position: relative;
+      z-index: 0;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        linear-gradient(160deg, rgba(15, 20, 32, 0.9) 0%, rgba(20, 25, 45, 0.94) 100%),
+        url("../img/background.jpg");
+      background-size: cover;
+      background-position: center top;
+      filter: blur(6px);
+      z-index: -1;
+    }
+    .card {
+      background: rgba(10,14,26,0.55);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 21px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 26px;
+      background: linear-gradient(100deg, rgba(245,215,110,0.14), rgba(255,255,255,0.02));
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .avatar {
+      width: 62px; height: 62px;
+      border-radius: 50%;
+      border: 2px solid rgba(245,215,110,0.5);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    .ov-head-text { display: flex; flex-direction: column; gap: 5px; }
+    .ov-head-text .name { font-size: 24px; font-weight: 700; color: #f2f4f8; }
+    .ov-head-text .sub { font-size: 13px; color: rgba(255,255,255,0.42); }
+
+    .ov-body { padding: 14px 26px 6px; }
+    .ov-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.055);
+    }
+    .ov-row:last-child { border-bottom: none; }
+
+    .ov-no {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 9px;
+      background: rgba(245,215,110,0.14);
+      border: 1px solid rgba(245,215,110,0.3);
+      color: #f5d76e;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .ov-main { flex: 1; min-width: 0; }
+    .ov-name {
+      font-size: 18px;
+      color: #eef2f8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ov-id {
+      margin-left: 10px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+    }
+    .ov-note {
+      margin-top: 5px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* 状态标签：对局中 / 游戏中 / 在线 / 离线 / 未公开 */
+    .ov-state {
+      flex-shrink: 0;
+      width: 168px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      padding: 6px 12px;
+      border-radius: 9px;
+    }
+    .ov-state .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .ov-state.playing { background: rgba(80,200,120,0.14); border: 1px solid rgba(80,200,120,0.32); color: #8fe4ac; }
+    .ov-state.idle    { background: rgba(90,160,235,0.14); border: 1px solid rgba(90,160,235,0.32); color: #93c2f0; }
+    .ov-state.online  { background: rgba(80,210,205,0.13); border: 1px solid rgba(80,210,205,0.3);  color: #8ce0db; }
+    .ov-state.offline { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); color: rgba(255,255,255,0.45); }
+    .ov-state.unknown { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); color: rgba(255,255,255,0.32); }
+
+    .ov-gaming {
+      flex-shrink: 0;
+      width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .ov-hero {
+      width: 46px; height: 46px;
+      border-radius: 10px;
+      border: 1px solid rgba(245,215,110,0.35);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .ov-gaming-text { display: flex; flex-direction: column; gap: 3px; text-align: right; }
+    .ov-mode { font-size: 14px; color: #f0d78a; }
+    .ov-min { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+    .ov-tip {
+      margin: 4px 26px 18px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.5);
+    }
+    .ov-tip b { color: #f5d76e; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      {{if .Avatar}}<img class="avatar" src="{{.Avatar}}" onerror="this.style.display='none'">{{end}}
+      <div class="ov-head-text">
+        <div class="name">营地在线状态</div>
+        <div class="sub">{{.Who}}</div>
+      </div>
+    </div>
+
+    <div class="ov-body">
+      {{range .Rows}}
+      <div class="ov-row">
+        <div class="ov-no">{{.No}}</div>
+        <div class="ov-main">
+          <div class="ov-name">{{.Name}}<span class="ov-id">{{.CampID}}</span></div>
+          {{if .Note}}<div class="ov-note">{{.Note}}</div>{{end}}
+        </div>
+        <div class="ov-state {{.Key}}"><i class="dot"></i>{{.Label}}</div>
+        <div class="ov-gaming">
+          {{if .HeroIcon}}<img class="ov-hero" src="{{.HeroIcon}}" onerror="this.style.display='none'">{{end}}
+          {{if or .Mode .Minutes}}
+          <div class="ov-gaming-text">
+            {{if .Mode}}<div class="ov-mode">{{.Mode}}</div>{{end}}
+            {{if .Minutes}}<div class="ov-min">{{.Minutes}}</div>{{end}}
+          </div>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+
+    <div class="ov-tip">
+      每次发 <b>#王者在线</b> 都现查一次，不做常驻轮询，也不落盘<br>
+      「游戏中」只说明游戏客户端开着（大厅、匹配中都算），真正在打才显示「对局中」<br>
+      营地没有观战画面接口，本机器人也发不了视频流，这里只能看到状态
+    </div>
+
+    <div class="footer">{{.GeneratedAt}}</div>
+  </div>
+</body>
+</html>

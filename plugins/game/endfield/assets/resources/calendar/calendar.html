@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{_res_path}}calendar/calendar.css">
+</head>
+<body>
+  <div class="calendar-wrapper">
+    <!-- Header Section -->
+    <div class="header">
+      <div class="top-accent"></div>
+      <div class="super-title">ARKNIGHTS:ENDFIELD</div>
+
+      <div class="title-container">
+        <div class="bg-text">CALENDAR</div>
+        <div class="main-title">
+          <div class="title-icon">
+            <div class="block-icon"></div>
+          </div>
+          <h1>「 版本日历 」 概览</h1>
+          <div class="dots-decoration">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-logo">
+        <div class="logo-text-big">终末</div>
+        <div class="logo-text-big">地</div>
+        <div class="logo-text-small">ARKNIGHTS<br />ENDFIELD</div>
+      </div>
+    </div>
+
+    <!-- Axis Area -->
+    <div class="axis-area">
+      <div class="axis-line-horizontal"></div>
+      {{each axisDates d}}
+      <div class="axis-marker" style="left: {{d.leftPct}}%;">
+        <div class="axis-flag">
+          <span class="flag-text">{{d.label}}</span>
+          <div class="flag-triangle"></div>
+        </div>
+        <div class="axis-line-vertical"></div>
+      </div>
+      {{/each}}
+
+      {{if nowLine}}
+      <div class="axis-marker now-marker" style="left: {{nowLine.leftPct}}%;">
+        <div class="axis-flag now-flag">
+          <span class="flag-text">{{nowLine.label}}</span>
+          <div class="flag-triangle now-triangle"></div>
+        </div>
+        <div class="axis-line-vertical now-vertical"></div>
+      </div>
+      {{/if}}
+    </div>
+
+    <!-- Gantt Chart Area -->
+    <div class="gantt-area">
+      {{each lanes lane}}
+      <div class="gantt-row">
+        <div class="row-bg"></div>
+        {{each lane act}}
+        <div class="gantt-bar-wrapper" style="left: {{act.leftPct}}%; width: {{act.widthPct}}%;">
+          <div class="gantt-bar {{act.themeClass}}">
+            <div class="bar-left-dec">
+              <div class="dec-icon"></div>
+              <span>{{act.desc}}</span>
+            </div>
+
+            <div class="bar-cover-container">
+              {{if act.cover}}
+              <img class="bar-cover" src="{{act.cover}}" alt="cover" onerror="this.style.display='none'">
+              {{/if}}
+            </div>
+
+            <div class="bar-content">
+              <div class="bar-bracket">[ {{act.desc}} ]</div>
+              <div class="bar-name">{{act.name}}</div>
+              <div class="bar-time">
+                {{if act.isPerm}}
+                {{act.start}} 开启
+                {{else if act.hideStart}}
+                截止 {{act.end}}
+                {{else}}
+                {{act.start}} - {{act.end}}
+                {{/if}}
+              </div>
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      {{if pluResPath}}
+      <img src="{{pluResPath}}img/logo.png" alt="footer" class="footer-img">
+      {{/if}}
+      <span class="footer-text">当前时间 {{currentTimeStr}}</span>
+    </div>
+  </div>
+</body>
+</html>

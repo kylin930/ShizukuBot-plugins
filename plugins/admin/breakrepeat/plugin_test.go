@@ -42,6 +42,13 @@ func TestDefinition(t *testing.T) {
 }
 
 func TestBreakRepeat(t *testing.T) {
+	old := shuffle
+	shuffle = func(n int, swap func(i, j int)) {
+		for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
+			swap(i, j)
+		}
+	}
+	t.Cleanup(func() { shuffle = old })
 	st := memState{}
 	message := "复读一下"
 	for i := 1; i <= 4; i++ {

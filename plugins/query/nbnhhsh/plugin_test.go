@@ -4,11 +4,23 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"shizukubot-plugins/internal/plugintest"
 	"shizukubot/sdk"
 )
+
+func TestDefinitionRegistersCommands(t *testing.T) {
+	commands, err := plugintest.Commands(Definition())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"nbnhhsh"} {
+		if commands[name] == nil {
+			t.Fatalf("command %q not registered: %v", name, commands)
+		}
+	}
+}
 
 func reply(t *testing.T, message string) string {
 	t.Helper()
@@ -66,7 +78,7 @@ func TestEmptyResult(t *testing.T) {
 	defer func() { guessURL = old }()
 
 	got := reply(t, "?? yyds")
-	if !strings.Contains(got, "没有找到释义") {
+	if got != "yyds: " {
 		t.Fatalf("reply = %q", got)
 	}
 }

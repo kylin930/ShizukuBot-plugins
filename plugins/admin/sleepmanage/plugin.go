@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -22,12 +23,13 @@ type records struct {
 
 // Definition subscribes to the 早安/晚安 triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "sleepmanage",
 		Name:        "睡眠小助手",
 		Version:     "1.0.0",
 		Description: "发送「晚安」记录入睡时间，发送「早安」记录起床时间与睡眠时长",
-	}, sdk.MessageEvents, Handle, sdk.WithPermissions("state.read", "state.write"))
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{{Name: "sleepmanage", Trigger: "晚安"}},
+		sdk.WithPermissions("state.read", "state.write"))
 }
 
 // Handle only replies inside the original time windows: 早安 6:00-12:00,

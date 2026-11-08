@@ -19,16 +19,19 @@ func TestHandle(t *testing.T) {
 	crazyURL = server.URL
 	defer func() { crazyURL = old }()
 
-	var got string
+	var got sdk.Reply
 	c := sdk.Call{Event: sdk.Event{Message: "疯狂星期四", Reply: func(_ context.Context, r sdk.Reply) error {
-		got = r.Text
+		got = r
 		return nil
 	}}}
 	if err := Handle(context.Background(), c); err != nil {
 		t.Fatal(err)
 	}
-	if got != "v我50" {
-		t.Fatalf("reply = %q", got)
+	if got.Text != "v我50" {
+		t.Fatalf("reply = %q", got.Text)
+	}
+	if got.Kind != "keyboard" || !strings.Contains(got.Keyboard, "疯狂星期四") {
+		t.Fatalf("kind = %q, keyboard = %q", got.Kind, got.Keyboard)
 	}
 }
 

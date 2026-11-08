@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏战绩</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            width: 900px;
+            background: linear-gradient(160deg, #0f1420 0%, #1a2133 100%);
+            color: #fff;
+            padding: 40px;
+            position: relative;
+            z-index: 0;
+        }
+
+        /* 背景大图层：模糊 + 暗化，保证前景清晰；图挂了则退回上面的深色渐变 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(160deg, rgba(15, 20, 32, 0.88) 0%, rgba(20, 25, 45, 0.93) 100%),
+                url("../img/background.jpg");
+            background-size: cover;
+            background-position: center top;
+            filter: blur(6px);
+            z-index: -1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .header .user-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .header .qq-avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(245, 215, 110, 0.6);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .header .sub {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 18px;
+            color: #9aa7bd;
+        }
+
+        .header .sub .streak {
+            color: #f5d76e;
+            font-weight: bold;
+            background: rgba(245, 215, 110, 0.14);
+            border: 1px solid rgba(245, 215, 110, 0.4);
+            border-radius: 8px;
+            padding: 2px 10px;
+        }
+
+        .results {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 18px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 胜负色条：左侧竖条标识胜负 */
+        .result-item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        .result-item.win-bg::before {
+            background: #57c98a;
+        }
+
+        .result-item.loss-bg::before {
+            background: #ff5b7c;
+        }
+
+        .avatar-container {
+            position: relative;
+            margin-right: 18px;
+            flex-shrink: 0;
+        }
+
+        .hero-avatar {
+            width: 68px;
+            height: 68px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid rgba(245, 215, 110, 0.5);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .special-tag {
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 3px 10px;
+            white-space: nowrap;
+        }
+
+        .special-tag.win {
+            color: #57c98a;
+            background: rgba(87, 201, 138, 0.14);
+            border: 1px solid rgba(87, 201, 138, 0.4);
+        }
+
+        .special-tag.loss {
+            color: #ff5b7c;
+            background: rgba(255, 91, 124, 0.14);
+            border: 1px solid rgba(255, 91, 124, 0.4);
+        }
+
+        .main-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .game-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .outcome {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px 16px;
+            border-radius: 20px;
+        }
+
+        .outcome.win {
+            color: #57c98a;
+            background: rgba(87, 201, 138, 0.16);
+            border: 1px solid rgba(87, 201, 138, 0.45);
+        }
+
+        .outcome.loss {
+            color: #ff5b7c;
+            background: rgba(255, 91, 124, 0.16);
+            border: 1px solid rgba(255, 91, 124, 0.45);
+        }
+
+        .game-mode {
+            font-size: 16px;
+            color: #9aa7bd;
+        }
+
+        /* 三杀及以上 / 超神：营地那套金色立体字图标（resources/img/kill_N.png），
+           和英雄详情图共用同一份解析，接口没有生涯累计口径，只能逐场标。
+           高度对齐 KDA 数字（.kda-stats 的字号），跟营地列表一样紧贴战绩 */
+        .mk-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .mk-tag img {
+            height: 24px;
+            display: block;
+        }
+
+        .kda-stats {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #eef2f8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tags {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* 全场最佳 / 分路评价 / 角色奖牌，原图 180~198×48 的长条 */
+        .eval-badge {
+            height: 28px;
+            width: auto;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .tag {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(0, 209, 255, 0.1);
+            color: #00d1ff;
+            border: 1px solid rgba(0, 209, 255, 0.25);
+        }
+
+        .tag[data-tag="MVP"] {
+            background: rgba(245, 215, 110, 0.14);
+            color: #f5d76e;
+            border-color: rgba(245, 215, 110, 0.4);
+        }
+
+        .tag[data-tag="SVP"] {
+            background: rgba(154, 167, 189, 0.14);
+            color: #c3cddd;
+            border-color: rgba(154, 167, 189, 0.4);
+        }
+
+        /* 分路/奖牌评价按档位配色：顶级紫 / 金牌金 / 银牌银 */
+        .tag[data-tag^="顶级"] {
+            background: rgba(191, 111, 255, 0.14);
+            color: #d79bff;
+            border-color: rgba(191, 111, 255, 0.4);
+        }
+
+        .tag[data-tag^="金牌"] {
+            background: rgba(240, 147, 43, 0.14);
+            color: #f0b04b;
+            border-color: rgba(240, 147, 43, 0.4);
+        }
+
+        .tag[data-tag^="银牌"] {
+            background: rgba(176, 190, 210, 0.12);
+            color: #b8c4d6;
+            border-color: rgba(176, 190, 210, 0.35);
+        }
+
+        .tag[data-tag="五杀"] {
+            background: rgba(255, 91, 124, 0.14);
+            color: #ff5b7c;
+            border-color: rgba(255, 91, 124, 0.4);
+        }
+
+        .side-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            margin-left: 16px;
+            flex-shrink: 0;
+            font-size: 15px;
+            color: #9aa7bd;
+        }
+
+        .rating-container {
+            margin-left: 18px;
+            width: 84px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .rating-container.win {
+            background: rgba(87, 201, 138, 0.1);
+            border: 1px solid rgba(87, 201, 138, 0.3);
+        }
+
+        .rating-container.loss {
+            background: rgba(255, 91, 124, 0.1);
+            border: 1px solid rgba(255, 91, 124, 0.3);
+        }
+
+        .game-rating {
+            font-size: 30px;
+            font-weight: bold;
+            line-height: 1;
+            color: #f5d76e;
+        }
+
+        .rating-label {
+            font-size: 13px;
+            margin-top: 6px;
+            color: #9aa7bd;
+        }
+
+        .empty-state {
+            padding: 80px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+        }
+
+        .empty-state-title {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #f5d76e, #f0932b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .empty-state-desc {
+            max-width: 560px;
+            line-height: 1.8;
+            font-size: 17px;
+            color: #9aa7bd;
+            text-align: center;
+        }
+
+        .footer {
+            margin-top: 26px;
+            text-align: center;
+            font-size: 16px;
+            color: #6f7c92;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="user-title">
+            {{if .Avatar}}<img src="{{.Avatar}}" class="qq-avatar" alt="QQ头像" onerror="this.style.visibility='hidden'">{{end}}
+        </div>
+        {{if not .EmptyState}}
+        <div class="sub">
+            {{if .HeroLabel}}<span>{{.HeroLabel}}</span>{{end}}
+            {{if .RoleJobName}}<span>{{.RoleJobName}}</span>{{end}}
+            {{if .ModeLabel}}<span>{{.ModeLabel}}</span>{{end}}
+            {{if gt .WinningStreak 1}}<span class="streak">最高 {{.WinningStreak}} 连胜</span>{{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <div class="results">
+        {{if .EmptyState}}
+        <div class="empty-state">
+            <div class="empty-state-title">{{.EmptyTitle}}</div>
+            <div class="empty-state-desc">{{.EmptyDescription}}</div>
+        </div>
+        {{else}}
+        {{range .Battles}}
+        {{$win := .Win}}
+        <div class="result-item {{if $win}}win-bg{{else}}loss-bg{{end}}">
+            <div class="avatar-container">
+                <img src="{{.HeroIcon}}" class="hero-avatar" alt="英雄头像" onerror="this.style.visibility='hidden'">
+            </div>
+
+            <div class="main-info">
+                <div class="game-header">
+                    <span class="outcome {{if .Win}}win{{else}}loss{{end}}">{{.Result}}</span>
+                    {{range .SpecialTags}}
+                    <span class="special-tag {{if $win}}win{{else}}loss{{end}}">{{.}}</span>
+                    {{end}}
+                    <span class="game-mode">{{.GameType}}</span>
+                </div>
+                <div class="kda-stats">
+                    {{.KillCnt}} / {{.DeadCnt}} / {{.AssistCnt}}
+                    {{range .KillTags}}<span class="mk-tag"><img src="{{.Icon}}" alt="{{.Text}}" onerror="this.style.display='none'"></span>{{end}}
+                </div>
+                <div class="tags">
+                    {{if .MvpIcon}}
+                    <img class="eval-badge" src="{{.MvpIcon}}" alt="{{.MvpLabel}}" onerror="this.style.display='none'">
+                    {{else if .MvpLabel}}
+                    <span class="tag" data-tag="{{.MvpLabel}}">{{.MvpLabel}}</span>
+                    {{end}}
+                    {{if .EvalIcon}}
+                    <img class="eval-badge" src="{{.EvalIcon}}" alt="{{.EvalLabel}}" onerror="this.style.display='none'">
+                    {{else if .EvalLabel}}
+                    <span class="tag" data-tag="{{.EvalLabel}}">{{.EvalLabel}}</span>
+                    {{end}}
+                    {{range .Tags}}
+                    <span class="tag" data-tag="{{.}}">{{.}}</span>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="side-info">
+                <div class="game-duration">⏱ {{.Duration}}</div>
+                <div class="game-date">🗓 {{.Time}}</div>
+            </div>
+
+            <div class="rating-container {{if .Win}}win{{else}}loss{{end}}">
+                <div class="game-rating">{{.Grade}}</div>
+                <div class="rating-label">评分</div>
+            </div>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+
+    <div class="footer">GloryOfKings-Plugin · 战绩查询</div>
+</body>
+
+</html>

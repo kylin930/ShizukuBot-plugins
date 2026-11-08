@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"sync"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -23,12 +24,13 @@ type repeat struct {
 
 // Definition subscribes to group text messages.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "breakrepeat",
 		Name:        "打断复读",
 		Version:     "1.0.0",
 		Description: "连续复读超过3条时打乱原文后回复",
 	}, []sdk.EventType{sdk.GroupMessage, sdk.GroupAtMessage}, Handle,
+		[]triggercmd.Command{{Name: "breakrepeat", Usage: "打断复读自动运行，无需指令。"}},
 		sdk.WithPermissions("state.read", "state.write"))
 }
 

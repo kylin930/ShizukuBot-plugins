@@ -1,16 +1,23 @@
 // Package handou 猜成语（文本版）。上游依赖图片绘制、字体与百度词典接口，
-// 这里改为文本反馈，并内嵌一个小规模成语表。
+// 这里改为文本反馈，并内嵌一个小规模兜底成语表；首次开局时会惰性下载上游
+// 完整 idiom.json，下载失败则继续使用内置词库，不阻塞游戏。
 package handou
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"math/rand"
+	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -18,14 +25,34 @@ var (
 	nowFunc = time.Now
 	pick    = rand.Intn
 	mu      sync.Mutex
+	statsMu sync.Mutex
 
 	startRe = regexp.MustCompile(`^(个人|团队)猜成语$`)
+	hotRe   = regexp.MustCompile(`^猜成语热门(汉字|成语)$`)
 	hanRe   = regexp.MustCompile(`^[\p{Han}]+$`)
+
+	// idiomURL 是上游完整成语词库，开局时惰性下载。
+	idiomURL = "https://cdn.jsdelivr.net/gh/FloatTech/zbpdata@main/Handou/idiom.json"
+	// httpClient 用于下载词库，测试通过替换 fetchIdiomJSON 保持离线。
+	httpClient = &http.Client{Timeout: 20 * time.Second}
+	// fetchIdiomJSON 拉取词库原始 JSON，测试中可整体替换。
+	fetchIdiomJSON = defaultFetchIdiomJSON
+
+	idiomMu      sync.RWMutex
+	idiomCache   map[string]idiom
+	idiomKeys    []string
+	idiomDetails map[string]idiomDetail
+	idiomTried   bool
+
+	// newReminder 便于测试关闭或捕获 105 秒提醒。
+	newReminder = func(d time.Duration, f func()) *time.Timer { return time.AfterFunc(d, f) }
 )
 
 const (
 	tries       = 7
 	gameTimeout = 2 * time.Minute
+	// reminderLead 是「还有 15 秒」提醒的提前量。
+	reminderLead = 15 * time.Second
 )
 
 type idiom struct {
@@ -34,9 +61,17 @@ type idiom struct {
 	Explain string
 }
 
+// idiomDetail 保存上游词库中的附加释义字段，内置词库没有这些字段时留空。
+type idiomDetail struct {
+	Baobian    string
+	Derivation string
+	Synonyms   []string
+}
+
 type session struct {
 	Word     string   `json:"word"`
 	Owner    string   `json:"owner,omitempty"`
+	Mode     string   `json:"mode,omitempty"`
 	Guesses  []string `json:"guesses,omitempty"`
 	Deadline int64    `json:"deadline"`
 	Active   bool     `json:"active"`
@@ -44,12 +79,13 @@ type session struct {
 
 // Definition subscribes to group messages for 猜成语.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "handou",
 		Name:        "猜成语",
 		Version:     "1.0.0",
 		Description: "发送「个人猜成语」或「团队猜成语」开始猜四字成语，每人七次机会",
-	}, sdk.MessageEvents, Handle, sdk.WithPermissions("state.read", "state.write"))
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{{Name: "handou", Trigger: "个人猜成语"}},
+		sdk.WithPermissions("state.read", "state.write"))
 }
 
 // Handle starts a round or checks a four-character guess.
@@ -61,17 +97,23 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	if m := startRe.FindStringSubmatch(text); m != nil {
 		return startGame(ctx, c, m[1])
 	}
+	if m := hotRe.FindStringSubmatch(text); m != nil {
+		return showHot(ctx, c, m[1])
+	}
 
 	mu.Lock()
 	s := load(ctx, c)
 	mu.Unlock()
-	if !s.Active {
-		return nil
-	}
 	if s.Owner != "" && s.Owner != c.Event.UserID {
 		return nil
 	}
-	if text == "结束猜成语" {
+	if text == "再来一局" {
+		return restart(ctx, c, s)
+	}
+	if !s.Active {
+		return nil
+	}
+	if text == "结束猜成语" || text == "结束" {
 		return endGame(ctx, c, "游戏已结束")
 	}
 	if !hanRe.MatchString(text) || len([]rune(text)) != len([]rune(s.Word)) {
@@ -83,8 +125,7 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	if guessedBefore(s.Guesses, text) {
 		return c.Reply(ctx, "该成语已经猜过了")
 	}
-	item, ok := lookup(text)
-	if !ok {
+	if _, ok := lookup(text); !ok {
 		return c.Reply(ctx, "你确定存在这样的成语吗？")
 	}
 
@@ -107,22 +148,42 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	answer, guesses := s.Word, append([]string(nil), s.Guesses...)
 	mu.Unlock()
 
+	recordGuess(ctx, c, text)
+	answerItem, _ := lookup(answer)
+
 	var b strings.Builder
 	b.WriteString(board(answer, guesses))
 	b.WriteString("\n")
 	switch {
 	case win:
-		b.WriteString("太棒了，你猜出来了！\n答案是: " + answer + "\n解释: " + item.Explain)
+		b.WriteString("太棒了，你猜出来了！\n答案是: " + answerText(answerItem))
 	case runOut:
-		b.WriteString("游戏结束...\n答案是: " + answer + "\n解释: " + item.Explain)
+		b.WriteString("游戏结束...\n答案是: " + answerText(answerItem))
 	default:
 		b.WriteString("已确认: " + confirmed(answer, guesses))
 		b.WriteString("\n剩余次数: " + strconv.Itoa(tries-len(guesses)))
 	}
-	return c.Reply(ctx, b.String())
+	return c.ReplyKeyboardOrText(ctx, b.String(), gameKeyboard())
+}
+
+// gameKeyboard 对局下方的快捷按钮。
+func gameKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(
+		sdk.CommandButton("handou-again", "再来一局", "再来一局"),
+		sdk.CommandButton("handou-stop", "结束", "结束猜成语"),
+	))
+}
+
+// restart 「再来一局」：沿用上一局的模式重新开始。
+func restart(ctx context.Context, c sdk.Call, s session) error {
+	if s.Mode == "" {
+		return c.Reply(ctx, "先发送「个人猜成语」或「团队猜成语」开始一局")
+	}
+	return startGame(ctx, c, s.Mode)
 }
 
 func startGame(ctx context.Context, c sdk.Call, mode string) error {
+	ensureIdioms(ctx)
 	mu.Lock()
 	s := load(ctx, c)
 	if s.Active && nowFunc().Unix() <= s.Deadline {
@@ -133,10 +194,11 @@ func startGame(ctx context.Context, c sdk.Call, mode string) error {
 	if mode == "个人" {
 		owner = c.Event.UserID
 	}
-	target := idioms[pick(len(idioms))]
+	target := pickIdiom()
 	s = session{
 		Word:     target.Word,
 		Owner:    owner,
+		Mode:     mode,
 		Deadline: nowFunc().Add(gameTimeout).Unix(),
 		Active:   true,
 	}
@@ -145,8 +207,9 @@ func startGame(ctx context.Context, c sdk.Call, mode string) error {
 	if err != nil {
 		return err
 	}
-	return c.Reply(ctx, "你有7次机会猜出4字成语\n首字拼音为："+target.Pinyin[0]+
-		"\n每次猜词后显示 对/有/无：对=位置正确，有=字存在但位置不对，无=不存在")
+	scheduleReminder(c, s)
+	return c.ReplyKeyboardOrText(ctx, "你有7次机会猜出"+strconv.Itoa(len([]rune(target.Word)))+"字成语\n首字拼音为："+target.Pinyin[0]+
+		"\n每次猜词后显示 对/有/无：对=位置正确，有=字存在但位置不对，无=不存在", gameKeyboard())
 }
 
 func endGame(ctx context.Context, c sdk.Call, prefix string) error {
@@ -164,7 +227,53 @@ func endGame(ctx context.Context, c sdk.Call, prefix string) error {
 		return err
 	}
 	item, _ := lookup(answer)
-	return c.Reply(ctx, prefix+"...\n答案是: "+answer+"\n解释: "+item.Explain)
+	return c.ReplyKeyboardOrText(ctx, prefix+"...\n答案是: "+answerText(item), gameKeyboard())
+}
+
+// scheduleReminder 在 105 秒时提醒还有 15 秒作答时间。
+func scheduleReminder(c sdk.Call, s session) {
+	newReminder(gameTimeout-reminderLead, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		mu.Lock()
+		cur := load(ctx, c)
+		active := cur.Active && cur.Word == s.Word && cur.Deadline == s.Deadline && nowFunc().Unix() <= cur.Deadline
+		mu.Unlock()
+		if !active {
+			return
+		}
+		_ = c.Reply(ctx, "猜成语，你还有15s作答时间")
+	})
+}
+
+// answerText 按上游格式输出答案、褒贬、词源、解释与近义词。
+func answerText(v idiom) string {
+	var b strings.Builder
+	b.WriteString(v.Word)
+	d := idiomDetailOf(v.Word)
+	if d.Baobian != "" && d.Baobian != "-" {
+		b.WriteString("\n" + d.Baobian + "词")
+	}
+	if d.Derivation != "" && d.Derivation != "-" {
+		b.WriteString("\n词源:\n" + d.Derivation)
+	} else {
+		b.WriteString("\n词源:无")
+	}
+	if v.Explain != "" && v.Explain != "-" {
+		b.WriteString("\n解释:\n" + v.Explain)
+	} else {
+		b.WriteString("\n解释:无")
+	}
+	if len(d.Synonyms) > 0 {
+		b.WriteString("\n近义词:\n" + strings.Join(d.Synonyms, ","))
+	}
+	return b.String()
+}
+
+func idiomDetailOf(word string) idiomDetail {
+	idiomMu.RLock()
+	defer idiomMu.RUnlock()
+	return idiomDetails[word]
 }
 
 func stateKey(c sdk.Call) string { return "handou:" + c.Event.GroupID }
@@ -179,13 +288,179 @@ func save(ctx context.Context, c sdk.Call, s session) error {
 	return sdk.SaveJSON(ctx, c.State, stateKey(c), s)
 }
 
+// idiomRecord 对应上游 idiom.json 中的单条成语。
+type idiomRecord struct {
+	Word        string   `json:"word"`
+	Chars       []string `json:"chars"`
+	Pinyin      []string `json:"pinyin"`
+	Baobian     string   `json:"baobian"`
+	Explanation string   `json:"explanation"`
+	Derivation  string   `json:"derivation"`
+	Synonyms    []string `json:"synonyms"`
+}
+
+// defaultFetchIdiomJSON 下载上游完整词库。
+func defaultFetchIdiomJSON(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, idiomURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("idiom.json 返回 %s", resp.Status)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, 64<<20))
+}
+
+// ensureIdioms 只在首次开局时尝试下载完整词库，失败后继续使用内置词库。
+func ensureIdioms(ctx context.Context) {
+	idiomMu.Lock()
+	defer idiomMu.Unlock()
+	if idiomTried {
+		return
+	}
+	idiomTried = true
+	data, err := fetchIdiomJSON(ctx)
+	if err != nil {
+		return
+	}
+	cache, keys, details, err := parseIdiomJSON(data)
+	if err != nil || len(keys) == 0 {
+		return
+	}
+	idiomCache, idiomKeys, idiomDetails = cache, keys, details
+}
+
+// parseIdiomJSON 把上游 JSON 映射解析为内存词库，只保留字段完整的成语。
+func parseIdiomJSON(data []byte) (map[string]idiom, []string, map[string]idiomDetail, error) {
+	var records map[string]idiomRecord
+	if err := json.Unmarshal(data, &records); err != nil {
+		return nil, nil, nil, err
+	}
+	cache := make(map[string]idiom, len(records))
+	details := make(map[string]idiomDetail, len(records))
+	for key, r := range records {
+		word := r.Word
+		if word == "" {
+			word = key
+		}
+		n := len([]rune(word))
+		if n == 0 || len(r.Chars) != n || len(r.Pinyin) != n || r.Pinyin[0] == "" {
+			continue
+		}
+		explain := r.Explanation
+		if explain == "" {
+			explain = r.Derivation
+		}
+		if explain == "" {
+			explain = "暂无解释"
+		}
+		cache[word] = idiom{Word: word, Pinyin: r.Pinyin, Explain: explain}
+		details[word] = idiomDetail{Baobian: r.Baobian, Derivation: r.Derivation, Synonyms: r.Synonyms}
+	}
+	keys := make([]string, 0, len(cache))
+	for k := range cache {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return cache, keys, details, nil
+}
+
+// pickIdiom 从已加载的上游词库中随机取题，未加载时回退内置词库。
+func pickIdiom() idiom {
+	idiomMu.RLock()
+	defer idiomMu.RUnlock()
+	if len(idiomKeys) > 0 {
+		return idiomCache[idiomKeys[pick(len(idiomKeys))]]
+	}
+	return idioms[pick(len(idioms))]
+}
+
 func lookup(word string) (idiom, bool) {
+	idiomMu.RLock()
+	v, ok := idiomCache[word]
+	idiomMu.RUnlock()
+	if ok {
+		return v, true
+	}
 	for _, v := range idioms {
 		if v.Word == word {
 			return v, true
 		}
 	}
 	return idiom{}, false
+}
+
+// handouStats 是跨局累计的猜词统计，用于「猜成语热门」。
+type handouStats struct {
+	Chars  map[string]int `json:"chars,omitempty"`
+	Idioms map[string]int `json:"idioms,omitempty"`
+}
+
+func statsKey() string { return "handou:stats" }
+
+// recordGuess 累计每个汉字与每个成语被猜中的次数。
+func recordGuess(ctx context.Context, c sdk.Call, word string) {
+	if c.State == nil {
+		return
+	}
+	statsMu.Lock()
+	defer statsMu.Unlock()
+	st := handouStats{}
+	_ = sdk.LoadJSON(ctx, c.State, statsKey(), &st)
+	if st.Chars == nil {
+		st.Chars = make(map[string]int)
+	}
+	if st.Idioms == nil {
+		st.Idioms = make(map[string]int)
+	}
+	for _, r := range word {
+		st.Chars[string(r)]++
+	}
+	st.Idioms[word]++
+	_ = sdk.SaveJSON(ctx, c.State, statsKey(), st)
+}
+
+// showHot 输出热门汉字或热门成语 Top10。
+func showHot(ctx context.Context, c sdk.Call, kind string) error {
+	statsMu.Lock()
+	st := handouStats{}
+	_ = sdk.LoadJSON(ctx, c.State, statsKey(), &st)
+	statsMu.Unlock()
+
+	counts := st.Chars
+	if kind == "成语" {
+		counts = st.Idioms
+	}
+	if len(counts) == 0 {
+		return c.Reply(ctx, "还没有统计数据，先来一局猜成语吧")
+	}
+	type entry struct {
+		key   string
+		count int
+	}
+	entries := make([]entry, 0, len(counts))
+	for k, v := range counts {
+		entries = append(entries, entry{key: k, count: v})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].count != entries[j].count {
+			return entries[i].count > entries[j].count
+		}
+		return entries[i].key < entries[j].key
+	})
+	if len(entries) > 10 {
+		entries = entries[:10]
+	}
+	lines := []string{"热门" + kind + "："}
+	for _, e := range entries {
+		lines = append(lines, e.key+":"+strconv.Itoa(e.count))
+	}
+	return c.Reply(ctx, strings.Join(lines, "\n"))
 }
 
 // feedback marks each character: 2 位置正确, 1 字存在但位置不对, 0 不存在。

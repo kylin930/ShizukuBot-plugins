@@ -49,7 +49,8 @@ func TestShindanWithName(t *testing.T) {
 	defer func() { baseURL = old }()
 
 	got := reply(t, "卖萌 小明")
-	if got != "今天你是 魔法少女\na & b" {
+	if !strings.HasPrefix(got, "今天你是 魔法少女\na & b") ||
+		!strings.Contains(got, "https://shindanmaker.com/360578") {
 		t.Fatalf("reply = %q", got)
 	}
 	if !strings.HasPrefix(postedName, "小明") || len(postedName) <= len("小明") {
@@ -87,6 +88,34 @@ func TestShindanFallsBackToUserID(t *testing.T) {
 	}
 	if got == "" {
 		t.Fatal("empty reply")
+	}
+}
+
+func TestShindanUsesSenderNickname(t *testing.T) {
+	var postedName string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.Header().Add("Set-Cookie", "_session=token123; Path=/")
+			_, _ = w.Write([]byte(`<input type="hidden" name="_token" value="tok">`))
+			return
+		}
+		_ = r.ParseMultipartForm(1 << 20)
+		postedName = r.FormValue("user_input_value_1")
+		_, _ = w.Write([]byte(resultHTML))
+	}))
+	defer server.Close()
+	old := baseURL
+	baseURL = server.URL
+	defer func() { baseURL = old }()
+
+	c := sdk.Call{Event: sdk.Event{Message: "今日老婆", UserID: "u42", Nickname: "小明", Reply: func(_ context.Context, r sdk.Reply) error {
+		return nil
+	}}}
+	if err := Handle(context.Background(), c); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(postedName, "小明") {
+		t.Fatalf("posted name = %q", postedName)
 	}
 }
 

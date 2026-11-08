@@ -6,12 +6,14 @@ import (
 	"errors"
 	"net"
 	"regexp"
+	"strings"
 	"time"
 
 	"shizukubot/sdk"
 )
 
-var hostPattern = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?$`)
+// hostPattern 校验域名（也接受 IPv4 字面量）；IPv6 由 net.ParseIP 单独识别。
+var hostPattern = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$`)
 
 // Definition registers /ping.
 func Definition() sdk.Definition {
@@ -30,14 +32,53 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		return c.Reply(ctx, "pong")
 	}
 	host := c.Args[0]
-	if !hostPattern.MatchString(host) {
+	normalized, ok := normalizeHost(host)
+	if !ok {
 		return c.Reply(ctx, "请输入正确的 IP 或域名，如 /ping example.com")
 	}
-	addr, latency, err := probeHost(ctx, host)
+	addr, latency, err := probeHost(ctx, normalized)
 	if err != nil {
 		return c.Reply(ctx, "ping "+host+" 失败: "+err.Error())
 	}
 	return c.Reply(ctx, "ping "+addr+" 成功，耗时 "+latency.Round(time.Millisecond).String())
+}
+
+// normalizeHost 校验主机名/IPv4/IPv6 字面量（可带端口），并去掉 IPv6 的方括号，
+// 便于后续 net.JoinHostPort 正确拼接。上游 isValidateInput 同样接受 IPv6。
+func normalizeHost(host string) (string, bool) {
+	if host == "" || strings.ContainsAny(host, "/ \t") {
+		return "", false
+	}
+	if h, port, err := net.SplitHostPort(host); err == nil {
+		if validPort(port) && validHostName(h) {
+			return host, true
+		}
+		return "", false
+	}
+	trimmed := host
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		trimmed = trimmed[1 : len(trimmed)-1]
+	}
+	if net.ParseIP(trimmed) != nil || hostPattern.MatchString(trimmed) {
+		return trimmed, true
+	}
+	return "", false
+}
+
+func validHostName(host string) bool {
+	return net.ParseIP(host) != nil || hostPattern.MatchString(host)
+}
+
+func validPort(port string) bool {
+	if port == "" || len(port) > 5 {
+		return false
+	}
+	for _, r := range port {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func probeHost(ctx context.Context, host string) (string, time.Duration, error) {

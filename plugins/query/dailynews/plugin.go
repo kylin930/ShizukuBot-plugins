@@ -4,6 +4,7 @@ package dailynews
 import (
 	"context"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -12,12 +13,14 @@ var imageURL = "https://uapis.cn/api/v1/daily/news-image"
 
 // Definition subscribes to the 「今日早报」 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "dailynews",
 		Name:        "今日早报",
 		Version:     "1.0.0",
 		Description: "发送「今日早报」，返回当天的新闻早报图片",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "dailynews", Trigger: "今日早报"},
+	})
 }
 
 // Handle replies with the early-news image provided by the upstream API.

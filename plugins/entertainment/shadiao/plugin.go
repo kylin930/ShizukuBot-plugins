@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -55,12 +56,14 @@ var actions = []action{
 
 // Definition subscribes to the 沙雕 app triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "shadiao",
 		Name:        "沙雕app",
 		Version:     "1.0.0",
 		Description: "发送「哄我」「渣我」「来碗绿茶」「发个朋友圈」「来碗毒鸡汤」「讲个段子」「马丁路德骂我」获取随机文案",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "shadiao", Trigger: "哄我"},
+	})
 }
 
 // Handle dispatches one of the fixed triggers to its upstream API.
@@ -74,9 +77,18 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		if err != nil {
 			return c.Reply(ctx, "获取失败: "+err.Error())
 		}
-		return c.Reply(ctx, out)
+		return c.ReplyKeyboardOrText(ctx, out, followUpKeyboard())
 	}
 	return nil
+}
+
+// followUpKeyboard 文案下方的三个快捷按钮，指令与 actions 的 key 完全一致。
+func followUpKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(
+		sdk.CommandButton("shadiao-hong", "再哄一次", "哄我"),
+		sdk.CommandButton("shadiao-du", "来碗毒鸡汤", "来碗毒鸡汤"),
+		sdk.CommandButton("shadiao-duanzi", "换个段子", "讲个段子"),
+	))
 }
 
 func fetchShadiao(ctx context.Context, url string) (string, error) {

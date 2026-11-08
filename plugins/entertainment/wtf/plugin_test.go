@@ -92,6 +92,21 @@ func TestQueryUsesMentionedUser(t *testing.T) {
 	}
 }
 
+func TestQueryUsesSenderNickname(t *testing.T) {
+	var escaped string
+	useServer(t, func(w http.ResponseWriter, r *http.Request) {
+		escaped = r.URL.EscapedPath()
+		_, _ = io.WriteString(w, `{"text":"结果","ok":true,"msg":""}`)
+	})
+	_, replied := reply(t, sdk.Event{GroupID: "g", UserID: "sender", Nickname: "小明", Message: "查询鬼东西0"})
+	if !replied {
+		t.Fatal("query did not reply")
+	}
+	if escaped != "/mRIFuS/%E5%B0%8F%E6%98%8E" {
+		t.Fatalf("request path = %q", escaped)
+	}
+}
+
 func TestQueryUpstreamFailure(t *testing.T) {
 	useServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{"text":"","ok":false,"msg":"参数错误"}`)

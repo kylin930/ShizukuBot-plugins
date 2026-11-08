@@ -7,8 +7,21 @@ import (
 	"strings"
 	"testing"
 
+	"shizukubot-plugins/internal/plugintest"
 	"shizukubot/sdk"
 )
+
+func TestDefinitionRegistersCommands(t *testing.T) {
+	commands, err := plugintest.Commands(Definition())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"hs"} {
+		if commands[name] == nil {
+			t.Fatalf("command %q not registered: %v", name, commands)
+		}
+	}
+}
 
 type capture struct {
 	texts  []string
@@ -67,8 +80,45 @@ func TestSearchCards(t *testing.T) {
 		got.images[1] != "https://img.example/hs/CS2_030.png?auth_key=k2" {
 		t.Fatalf("images = %q", got.images)
 	}
+	if len(got.texts) != 1 || !strings.Contains(got.texts[0], "https://fbigame.com/card?search=") {
+		t.Fatalf("texts = %q", got.texts)
+	}
+}
+
+func TestDeckCodeImage(t *testing.T) {
+	code := "AAE" + strings.Repeat("A", 70)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			_, _ = w.Write([]byte(`<script>var hash = "deadbeef";</script>`))
+		case "/ajax.php":
+			mods := r.URL.Query()["mod"]
+			if len(mods) == 0 || mods[len(mods)-1] != "general_deck_image" {
+				t.Errorf("mod = %q", mods)
+			}
+			if r.URL.Query().Get("deck_code") != code {
+				t.Errorf("deck_code = %q", r.URL.Query().Get("deck_code"))
+			}
+			if r.URL.Query().Get("hash") != "deadbeef" {
+				t.Errorf("hash = %q", r.URL.Query().Get("hash"))
+			}
+			_, _ = w.Write([]byte(`{"img":"iVBORw0KGgo="}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	t.Cleanup(server.Close)
+	oldHome, oldAjax := homeURL, ajaxURL
+	homeURL = server.URL + "/"
+	ajaxURL = server.URL + "/ajax.php"
+	t.Cleanup(func() { homeURL, ajaxURL = oldHome, oldAjax })
+
+	got := run(t, "卡组 "+code)
 	if len(got.texts) != 0 {
 		t.Fatalf("texts = %q", got.texts)
+	}
+	if len(got.images) != 1 || !strings.HasPrefix(got.images[0], "data:image/png;base64,") {
+		t.Fatalf("images = %q", got.images)
 	}
 }
 

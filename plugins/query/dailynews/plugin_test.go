@@ -4,8 +4,21 @@ import (
 	"context"
 	"testing"
 
+	"shizukubot-plugins/internal/plugintest"
 	"shizukubot/sdk"
 )
+
+func TestDefinitionRegistersCommands(t *testing.T) {
+	commands, err := plugintest.Commands(Definition())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"dailynews"} {
+		if commands[name] == nil {
+			t.Fatalf("command %q not registered: %v", name, commands)
+		}
+	}
+}
 
 func TestHandle(t *testing.T) {
 	var got sdk.Reply

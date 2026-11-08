@@ -14,12 +14,16 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
+// siteURL 测定站点地址，用于回复里的可点击链接。
+const siteURL = "https://shindanmaker.com"
+
 var (
 	// baseURL 与上游一致，测试可替换。
-	baseURL   = "https://shindanmaker.com"
+	baseURL   = siteURL
 	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
 
 	client = &http.Client{Timeout: 10 * time.Second}
@@ -45,17 +49,19 @@ var commands = []struct {
 
 // Definition subscribes to the five shindan triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:      "shindan",
 		Name:    "shindan测定",
 		Version: "1.0.0",
 		Description: "发送「异世界转生」「今天是什么少女」「卖萌」「今日老婆」「黄油角色」，" +
 			"可附带名字，返回 shindanmaker 的测定结果",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "shindan", Trigger: "异世界转生"},
+	})
 }
 
 // Handle matches a trigger prefix and queries shindanmaker with the given name.
-// 没有名字时退回用户 ID；框架没有昵称字段，因此不再读取昵称。
+// 没有名字时优先使用发送者昵称，平台未下发昵称时退回用户 ID。
 func Handle(ctx context.Context, c sdk.Call) error {
 	text := sdk.Text(c.Event)
 	for _, cmd := range commands {
@@ -65,13 +71,20 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		}
 		name = strings.TrimSpace(name)
 		if name == "" {
+			name = c.Event.Nickname
+		}
+		if name == "" {
 			name = c.Event.UserID
 		}
 		out, err := shindan(ctx, cmd.id, name)
 		if err != nil {
 			return c.Reply(ctx, "ERROR: "+err.Error())
 		}
-		return c.Reply(ctx, out)
+		out += fmt.Sprintf("\n\n来源：[shindanmaker](%s/%d)", siteURL, cmd.id)
+		if err := c.ReplyMarkdown(ctx, out); err != nil {
+			return c.Reply(ctx, out)
+		}
+		return nil
 	}
 	return nil
 }

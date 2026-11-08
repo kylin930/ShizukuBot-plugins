@@ -10,11 +10,11 @@ import (
 	"shizukubot/sdk"
 )
 
-func reply(t *testing.T, message string) string {
+func reply(t *testing.T, message string) sdk.Reply {
 	t.Helper()
-	var got string
+	var got sdk.Reply
 	c := sdk.Call{Event: sdk.Event{Message: message, Reply: func(_ context.Context, r sdk.Reply) error {
-		got = r.Text
+		got = r
 		return nil
 	}}}
 	if err := Handle(context.Background(), c); err != nil {
@@ -76,18 +76,27 @@ func TestAllTriggers(t *testing.T) {
 		"马丁路德骂我": "你个木头！",
 	}
 	for keyword, want := range cases {
-		if got := reply(t, keyword); got != want {
-			t.Fatalf("%q -> %q, want %q", keyword, got, want)
+		got := reply(t, keyword)
+		if got.Text != want {
+			t.Fatalf("%q -> %q, want %q", keyword, got.Text, want)
+		}
+		if got.Kind != "keyboard" {
+			t.Fatalf("%q kind = %q", keyword, got.Kind)
+		}
+		for _, command := range []string{"哄我", "来碗毒鸡汤", "讲个段子"} {
+			if !strings.Contains(got.Keyboard, command) {
+				t.Fatalf("%q keyboard missing %q: %q", keyword, command, got.Keyboard)
+			}
 		}
 	}
 }
 
 func TestIgnoresOtherText(t *testing.T) {
-	if got := reply(t, "哄"); got != "" {
-		t.Fatalf("unexpected reply %q", got)
+	if got := reply(t, "哄"); got.Text != "" {
+		t.Fatalf("unexpected reply %q", got.Text)
 	}
-	if got := reply(t, "今天天气不错"); got != "" {
-		t.Fatalf("unexpected reply %q", got)
+	if got := reply(t, "今天天气不错"); got.Text != "" {
+		t.Fatalf("unexpected reply %q", got.Text)
 	}
 }
 
@@ -96,7 +105,7 @@ func TestUpstreamErrorReply(t *testing.T) {
 	chpURL = "http://127.0.0.1:1/"
 	defer func() { chpURL = old }()
 
-	if got := reply(t, "哄我"); !strings.Contains(got, "获取失败") {
-		t.Fatalf("reply = %q", got)
+	if got := reply(t, "哄我"); !strings.Contains(got.Text, "获取失败") || got.Kind != "text" {
+		t.Fatalf("reply = %q, kind = %q", got.Text, got.Kind)
 	}
 }

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>王者战绩详情</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      width: 1050px;
+      padding: 40px;
+      color: #fff;
+      background: linear-gradient(160deg, #0f1420 0%, #1a2133 100%);
+      position: relative;
+      z-index: 0;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        linear-gradient(160deg, rgba(15, 20, 32, 0.92) 0%, rgba(20, 25, 45, 0.95) 100%),
+        url("../img/background.jpg");
+      background-size: cover;
+      background-position: center top;
+      filter: blur(6px);
+      z-index: -1;
+    }
+    .card {
+      background: rgba(10,14,26,0.55);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 21px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px 28px;
+      background: linear-gradient(100deg, rgba(245,215,110,0.12), rgba(255,255,255,0.02));
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .head.lose {
+      background: linear-gradient(100deg, rgba(120,140,180,0.16), rgba(255,255,255,0.02));
+    }
+    .result {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #f5d76e;
+    }
+    .head.lose .result { color: #9fb0cd; }
+    .result-en {
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: rgba(255,255,255,0.35);
+      margin-top: 4px;
+    }
+    .head-main { flex: 1; }
+    .head-title {
+      font-size: 21px;
+      font-weight: 700;
+      color: #f2f4f8;
+    }
+    .head-sub {
+      margin-top: 6px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+    }
+    .head-meta {
+      display: flex;
+      gap: 26px;
+      text-align: right;
+    }
+    .head-meta .item .k { font-size: 12px; color: rgba(255,255,255,0.35); }
+    .head-meta .item .v { font-size: 16px; color: #f2f4f8; margin-top: 4px; font-weight: 600; }
+
+    .scoreboard {
+      display: flex;
+      gap: 14px;
+      padding: 16px 28px 0;
+    }
+    .score-card {
+      flex: 1;
+      border-radius: 14px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .score-card.win { border-color: rgba(245,215,110,0.35); background: rgba(245,215,110,0.07); }
+    .score-top { display: flex; justify-content: space-between; align-items: center; }
+    .score-side { font-size: 15px; font-weight: 700; color: #f2f4f8; }
+    .score-side .badge {
+      margin-left: 8px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: #f5d76e;
+      background: rgba(245,215,110,0.14);
+      vertical-align: 2px;
+    }
+    .score-kda { font-size: 24px; font-weight: 800; color: #f2f4f8; margin-top: 8px; }
+    .score-kda span { font-size: 13px; color: rgba(255,255,255,0.35); font-weight: 400; margin-left: 6px; }
+    .score-meta { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.42); display: flex; gap: 16px; }
+
+    .team-block { padding: 14px 28px 0; }
+    .team-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 0 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+    }
+    .team-title b { color: #f2f4f8; font-size: 15px; }
+    .team-title .line { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .row:last-child { border-bottom: none; }
+    .row.me { background: rgba(245,215,110,0.05); border-radius: 10px; padding-left: 10px; padding-right: 10px; }
+
+    .hero {
+      position: relative;
+      flex-shrink: 0;
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.05);
+    }
+    .row.me .hero { border-color: rgba(245,215,110,0.75); }
+    .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .who { width: 108px; flex-shrink: 0; overflow: hidden; }
+    .who .name {
+      font-size: 14px;
+      color: #f2f4f8;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .who .hero-name { margin-top: 3px; font-size: 12px; color: rgba(255,255,255,0.4); }
+    .kda { width: 90px; flex-shrink: 0; font-size: 15px; color: #e8ecf4; font-weight: 600; letter-spacing: 0.5px; }
+    .grade {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 19px; font-weight: 800;
+      background: rgba(255,255,255,0.06);
+      color: #cfd7e6;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .grade.s { color: #f5d76e; border-color: rgba(245,215,110,0.5); background: rgba(245,215,110,0.12); }
+    .grade.a { color: #b48cff; border-color: rgba(180,140,255,0.45); background: rgba(180,140,255,0.1); }
+    .grade.b { color: #6fb6ff; border-color: rgba(111,182,255,0.4); background: rgba(111,182,255,0.08); }
+
+    .stats { flex: 1; display: flex; gap: 8px; }
+    .stat { width: 66px; flex-shrink: 0; }
+    .stat .k { font-size: 11px; color: rgba(255,255,255,0.32); }
+    .stat .v { margin-top: 3px; font-size: 13px; color: #dfe5ef; }
+    .stat .v em { font-style: normal; color: rgba(255,255,255,0.4); font-size: 11px; margin-left: 2px; }
+
+    .tags { width: 112px; flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+    }
+    .tag.mvp { color: #1a1408; background: #f5d76e; border-color: #f5d76e; font-weight: 700; }
+    .tag svg { vertical-align: -1px; }
+
+    .equips { width: 166px; flex-shrink: 0; display: flex; gap: 3px; justify-content: flex-end; }
+    .equips img {
+      width: 22px; height: 22px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.06);
+    }
+    .equips img.skill { border: 1px solid rgba(245,215,110,0.45); }
+
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="head{{if ne .Result "胜利"}} lose{{end}}">
+      <div>
+        <div class="result">{{.Result}}</div>
+        <div class="result-en">{{.ResultEn}}</div>
+      </div>
+      <div class="head-main">
+        <div class="head-title">{{if .MapName}}{{.MapName}}{{else}}王者峡谷{{end}}{{if .MatchDesc}} · {{.MatchDesc}}{{end}}</div>
+        <div class="head-sub">{{if .Tips}}{{.Tips}}{{else}}战绩详情{{end}}</div>
+      </div>
+      <div class="head-meta">
+        <div class="item"><div class="k">对局时间</div><div class="v">{{if .StartTime}}{{.StartTime}}{{else}}--{{end}}</div></div>
+        <div class="item"><div class="k">时长</div><div class="v">{{if .UsedTime}}{{.UsedTime}}{{else}}--{{end}}</div></div>
+      </div>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-card{{if .MyTeam.Win}} win{{end}}">
+        <div class="score-top">
+          <div class="score-side">{{.MySide}}{{if .MyTeam.Win}}<span class="badge">胜利</span>{{end}}</div>
+        </div>
+        <div class="score-kda">{{.MyTeam.KillDeadAssist}}<span>团队 KDA</span></div>
+        <div class="score-meta">
+          <span>经济 {{.MyTeam.Money}}</span>
+          <span>推塔 {{.MyTeam.Tower}}</span>
+          {{if .MyDragons}}<span>{{.MyDragons}}</span>{{end}}
+        </div>
+      </div>
+      <div class="score-card{{if .EnemyTeam.Win}} win{{end}}">
+        <div class="score-top">
+          <div class="score-side">{{.EnemySide}}{{if .EnemyTeam.Win}}<span class="badge">胜利</span>{{end}}</div>
+        </div>
+        <div class="score-kda">{{.EnemyTeam.KillDeadAssist}}<span>团队 KDA</span></div>
+        <div class="score-meta">
+          <span>经济 {{.EnemyTeam.Money}}</span>
+          <span>推塔 {{.EnemyTeam.Tower}}</span>
+          {{if .EnemyDragons}}<span>{{.EnemyDragons}}</span>{{end}}
+        </div>
+      </div>
+    </div>
+
+    <div class="team-block">
+      <div class="team-title"><b>我方</b><span>{{.MySide}}</span><span class="line"></span></div>
+      {{range .MyTeam.Players}}
+      <div class="row{{if .IsMe}} me{{end}}">
+        <div class="hero">{{if .HeroIcon}}<img src="{{.HeroIcon}}" alt="">{{end}}</div>
+        <div class="who">
+          <div class="name">{{.Name}}{{if .IsMe}}（我）{{end}}</div>
+          <div class="hero-name">{{.HeroName}}</div>
+        </div>
+        <div class="kda">{{.KDA}}</div>
+        <div class="grade {{.GradeKey}}">{{.Grade}}</div>
+        <div class="stats">
+          <div class="stat"><div class="k">经济</div><div class="v">{{.Money}}</div></div>
+          <div class="stat"><div class="k">输出</div><div class="v">{{if .Hurt}}{{.Hurt}}{{else}}--{{end}}{{if .HurtRate}}<em>{{.HurtRate}}%</em>{{end}}</div></div>
+          <div class="stat"><div class="k">承伤</div><div class="v">{{if .BeHurt}}{{.BeHurt}}{{else}}--{{end}}</div></div>
+          <div class="stat"><div class="k">参团</div><div class="v">{{if .JoinRate}}{{.JoinRate}}%{{else}}--{{end}}</div></div>
+        </div>
+        <div class="tags">
+          {{if .MvpTag}}<span class="tag mvp">{{.MvpTag}}</span>{{end}}
+          {{if .EvalTag}}<span class="tag">{{.EvalTag}}</span>{{end}}
+          {{range .MaxTags}}<span class="tag">{{.}}</span>{{end}}
+        </div>
+        <div class="equips">
+          {{range $index, $icon := .EquipIcons}}{{if $index}}<img src="{{$icon}}" alt="">{{else}}<img class="skill" src="{{$icon}}" alt="">{{end}}{{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+
+    <div class="team-block">
+      <div class="team-title"><b>敌方</b><span>{{.EnemySide}}</span><span class="line"></span></div>
+      {{range .EnemyTeam.Players}}
+      <div class="row{{if .IsMe}} me{{end}}">
+        <div class="hero">{{if .HeroIcon}}<img src="{{.HeroIcon}}" alt="">{{end}}</div>
+        <div class="who">
+          <div class="name">{{.Name}}{{if .IsMe}}（我）{{end}}</div>
+          <div class="hero-name">{{.HeroName}}</div>
+        </div>
+        <div class="kda">{{.KDA}}</div>
+        <div class="grade {{.GradeKey}}">{{.Grade}}</div>
+        <div class="stats">
+          <div class="stat"><div class="k">经济</div><div class="v">{{.Money}}</div></div>
+          <div class="stat"><div class="k">输出</div><div class="v">{{if .Hurt}}{{.Hurt}}{{else}}--{{end}}{{if .HurtRate}}<em>{{.HurtRate}}%</em>{{end}}</div></div>
+          <div class="stat"><div class="k">承伤</div><div class="v">{{if .BeHurt}}{{.BeHurt}}{{else}}--{{end}}</div></div>
+          <div class="stat"><div class="k">参团</div><div class="v">{{if .JoinRate}}{{.JoinRate}}%{{else}}--{{end}}</div></div>
+        </div>
+        <div class="tags">
+          {{if .MvpTag}}<span class="tag mvp">{{.MvpTag}}</span>{{end}}
+          {{if .EvalTag}}<span class="tag">{{.EvalTag}}</span>{{end}}
+          {{range .MaxTags}}<span class="tag">{{.}}</span>{{end}}
+        </div>
+        <div class="equips">
+          {{range $index, $icon := .EquipIcons}}{{if $index}}<img src="{{$icon}}" alt="">{{else}}<img class="skill" src="{{$icon}}" alt="">{{end}}{{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+
+    <div class="footer">战绩详情 · {{.GeneratedAt}}</div>
+  </div>
+</body>
+</html>

@@ -35,6 +35,34 @@ func call(t *testing.T, st sdk.State, event sdk.Event) (string, bool) {
 	return got, replied
 }
 
+func keyboardOf(t *testing.T, st sdk.State, event sdk.Event) sdk.Reply {
+	t.Helper()
+	var got sdk.Reply
+	event.Reply = func(_ context.Context, r sdk.Reply) error {
+		got = r
+		return nil
+	}
+	if err := Handle(context.Background(), sdk.Call{Event: event, State: st}); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func buttonCommands(t *testing.T, payload string) []string {
+	t.Helper()
+	var kb sdk.Keyboard
+	if err := json.Unmarshal([]byte(payload), &kb); err != nil {
+		t.Fatal(err)
+	}
+	var cmds []string
+	for _, row := range kb.Content.Rows {
+		for _, button := range row.Buttons {
+			cmds = append(cmds, button.Action.Data)
+		}
+	}
+	return cmds
+}
+
 func TestDefinition(t *testing.T) {
 	d := Definition()
 	if err := d.Validate(); err != nil {
@@ -79,6 +107,32 @@ func TestAirConditioner(t *testing.T) {
 	}
 	if got, _ := call(t, st, sdk.Event{GroupID: "other", Message: "群温度"}); got != "💤\n群温度 26℃" {
 		t.Fatalf("其他群 = %q", got)
+	}
+}
+
+func TestAirConditionerKeyboard(t *testing.T) {
+	st := memState{}
+	reply := keyboardOf(t, st, sdk.Event{GroupID: "g", Message: "空调开"})
+	if reply.Kind != "keyboard" {
+		t.Fatalf("kind = %q", reply.Kind)
+	}
+	cmds := buttonCommands(t, reply.Keyboard)
+	want := []string{"空调开", "空调关", "群温度"}
+	if len(cmds) != len(want) {
+		t.Fatalf("commands = %v", cmds)
+	}
+	for i, cmd := range want {
+		if cmds[i] != cmd {
+			t.Fatalf("commands = %v", cmds)
+		}
+	}
+
+	temp := keyboardOf(t, st, sdk.Event{GroupID: "g", Message: "设置温度30"})
+	if temp.Kind != "keyboard" {
+		t.Fatalf("temp kind = %q", temp.Kind)
+	}
+	if cmds := buttonCommands(t, temp.Keyboard); len(cmds) != 4 || cmds[3] != "设置温度26" {
+		t.Fatalf("temp commands = %v", cmds)
 	}
 }
 

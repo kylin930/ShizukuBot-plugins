@@ -1,0 +1,20 @@
+{
+  "auth_client_name": "终末地机器人",
+  "auth_client_type": "bot",
+  "auth_scopes": [
+    "user_info",
+    "binding_info",
+    "game_data",
+    "attendance"
+  ],
+  "api_key": "",
+  "use_wiki_strategy": true,
+  "push_stamina": {
+    "enabled": true,
+    "cron": "*/15 * * * *"
+  },
+  "push_announcement": {
+    "enabled": true,
+    "cron": "*/2 * * * *"
+  }
+}

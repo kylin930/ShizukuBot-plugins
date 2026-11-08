@@ -4,6 +4,7 @@ package moyucalendar
 import (
 	"context"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -12,12 +13,14 @@ var imageURL = "https://api.vvhan.com/api/moyu"
 
 // Definition subscribes to the 「摸鱼人日历」 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "moyucalendar",
 		Name:        "摸鱼人日历",
 		Version:     "1.0.0",
 		Description: "发送「摸鱼人日历」，返回当天的摸鱼日历图片",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "moyucalendar", Trigger: "摸鱼人日历"},
+	})
 }
 
 // Handle replies with the calendar image provided by the upstream API.

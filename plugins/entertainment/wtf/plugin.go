@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -121,16 +122,18 @@ var table = []generator{
 
 // Definition subscribes to the 鬼东西 triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "wtf",
 		Name:        "鬼东西",
 		Version:     "1.0.0",
-		Description: "发送「鬼东西列表」查看项目，发送「查询鬼东西N」以被 @ 用户或用户 ID 调用对应测试",
-	}, sdk.MessageEvents, Handle)
+		Description: "发送「鬼东西列表」查看项目，发送「查询鬼东西N」以被 @ 用户、发送者昵称或用户 ID 调用对应测试",
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "wtf", Trigger: "鬼东西列表"},
+	})
 }
 
-// Handle 列表在群聊和私聊都可用；查询沿用上游的仅群聊限制。框架没有昵称，
-// 因此优先使用被 @ 的成员 ID，其次使用发送者 ID 作为输入。
+// Handle 列表在群聊和私聊都可用；查询沿用上游的仅群聊限制。
+// 输入优先使用被 @ 的成员 ID，其次使用发送者昵称，最后退回用户 ID。
 func Handle(ctx context.Context, c sdk.Call) error {
 	text := sdk.Text(c.Event)
 	if sdk.MatchFull(text, "鬼东西列表") {
@@ -147,7 +150,10 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	if index < 0 || index >= len(table) {
 		return c.Reply(ctx, "没有这项内容！")
 	}
-	name := c.Event.UserID
+	name := c.Event.Nickname
+	if name == "" {
+		name = c.Event.UserID
+	}
 	if ids := sdk.MentionUserIDs(c.Event); len(ids) > 0 {
 		name = ids[0]
 	}

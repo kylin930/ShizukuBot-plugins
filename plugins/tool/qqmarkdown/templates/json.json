@@ -1,0 +1,9 @@
+{
+    "msg_id": "${session.messageId}",
+    "event_id": "${INTERACTION_CREATE}",
+    "msg_type": 2,
+    "content": "",
+    "keyboard": {
+        "id": "引号内容请修改为你的json模板ID"
+    }
+}

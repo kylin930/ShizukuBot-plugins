@@ -7,17 +7,18 @@ import (
 	"strconv"
 	"strings"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
 // Definition subscribes to group and C2C messages for the 选择 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "choose",
 		Name:        "选择困难症帮手",
 		Version:     "1.0.0",
 		Description: "发送「选择 A 还是 B 还是 C」，随机帮你选一个",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{{Name: "choose", Trigger: "选择"}})
 }
 
 // Handle picks one option from the 「还是」-separated list.
@@ -34,7 +35,7 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	for i, option := range options {
 		lines = append(lines, strconv.Itoa(i+1)+", "+option)
 	}
-	return c.Reply(ctx, "你的选项有:\n"+strings.Join(lines, "\n")+"\n你最终会选: "+options[rand.Intn(len(options))])
+	return c.Reply(ctx, "> "+c.Event.Nickname+"\n你的选项有:\n"+strings.Join(lines, "\n")+"\n你最终会选: "+options[rand.Intn(len(options))])
 }
 
 func splitOptions(text string) []string {

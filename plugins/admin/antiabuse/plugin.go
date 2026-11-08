@@ -3,10 +3,12 @@ package antiabuse
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -18,22 +20,59 @@ const (
 
 const banDuration = 2 * time.Minute
 
-// defaultWords 是内嵌的小规模示例词表，检测时始终生效，且不能通过指令删除。
+// noPermission 是缺少管理员身份时的统一提示。
+const noPermission = "没有权限。请先在插件配置的 admin_users 中加入你的 openid。"
+
+// defaultWords 是内嵌的小规模示例词表，首次检测时生效；
+// 与上游一致，管理员可以通过「删除违禁词」将其移除。
 var defaultWords = []string{"傻逼", "操你妈", "狗日的"}
 
 // mu 保护同一实例内的词表读改写。
 var mu sync.Mutex
 
 // Definition subscribes to group messages.
-// 框架不提供群管理员身份，词表增删无法像原插件那样校验管理员权限。
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "antiabuse",
 		Name:        "违禁词检测",
 		Version:     "1.0.0",
-		Description: "检测群消息中的违禁词，撤回并禁言 2 分钟；支持添加/删除/查看本群词表",
+		Description: "检测群消息中的违禁词，撤回并禁言 2 分钟；管理员可添加/删除/查看本群词表",
 	}, []sdk.EventType{sdk.GroupMessage, sdk.GroupAtMessage}, Handle,
-		sdk.WithPermissions("state.read", "state.write", "message.recall", "group.manage"))
+		[]triggercmd.Command{{Name: "antiabuse", Usage: "违禁词检测自动运行；管理员可发送「添加违禁词」「删除违禁词」「查看违禁词」维护本群词表。"}},
+		sdk.WithPermissions("state.read", "state.write", "message.recall", "group.manage", "config.read"),
+		sdk.WithConfig(sdk.Schema{
+			Type: "object",
+			Properties: map[string]sdk.Schema{
+				"admin_users": {
+					Type:        "array",
+					Description: "允许添加/删除违禁词的 member_openid 列表；成员可发送“我的ID”查看",
+					Items:       &sdk.Schema{Type: "string"},
+					Default:     json.RawMessage(`[]`),
+				},
+			},
+		}))
+}
+
+// isAdmin 判断发送者是否在 admin_users 中。
+func isAdmin(c sdk.Call) bool {
+	if c.Event.UserID == "" || c.Config == nil {
+		return false
+	}
+	switch v := c.Config["admin_users"].(type) {
+	case []string:
+		for _, id := range v {
+			if id == c.Event.UserID {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if id, ok := item.(string); ok && id == c.Event.UserID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Handle detects abuse words before handling word-list commands.
@@ -47,9 +86,15 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		return nil
 	}
 	if word, ok := sdk.MatchPrefix(text, addPrefix); ok {
+		if !isAdmin(c) {
+			return c.Reply(ctx, noPermission)
+		}
 		return addWord(ctx, c, word)
 	}
 	if word, ok := sdk.MatchPrefix(text, delPrefix); ok {
+		if !isAdmin(c) {
+			return c.Reply(ctx, noPermission)
+		}
 		return delWord(ctx, c, word)
 	}
 	if _, ok := sdk.MatchPrefix(text, listPrefix); ok {
@@ -83,6 +128,12 @@ func addWord(ctx context.Context, c sdk.Call, word string) error {
 		return c.Reply(ctx, "用法：添加违禁词<违禁词>")
 	}
 	mu.Lock()
+	if isDefaultWord(word) {
+		removed := removeWord(loadRemoved(ctx, c), word)
+		_ = sdk.SaveJSON(ctx, c.State, removedKey(c.Event.GroupID), removed)
+		mu.Unlock()
+		return c.Reply(ctx, "成功")
+	}
 	words := loadWords(ctx, c)
 	for _, w := range words {
 		if w == word {
@@ -102,7 +153,9 @@ func delWord(ctx context.Context, c sdk.Call, word string) error {
 	}
 	mu.Lock()
 	words := loadWords(ctx, c)
-	if len(words) == 0 {
+	removed := loadRemoved(ctx, c)
+	isDefault := isDefaultWord(word)
+	if len(words) == 0 && (!isDefault || containsWord(removed, word)) {
 		mu.Unlock()
 		return c.Reply(ctx, "本群还没有违禁词~")
 	}
@@ -113,6 +166,10 @@ func delWord(ctx context.Context, c sdk.Call, word string) error {
 		}
 	}
 	_ = sdk.SaveJSON(ctx, c.State, wordsKey(c.Event.GroupID), kept)
+	if isDefault && !containsWord(removed, word) {
+		removed = append(removed, word)
+		_ = sdk.SaveJSON(ctx, c.State, removedKey(c.Event.GroupID), removed)
+	}
 	mu.Unlock()
 	return c.Reply(ctx, "成功")
 }
@@ -128,8 +185,14 @@ func listWords(ctx context.Context, c sdk.Call) error {
 }
 
 func allWords(ctx context.Context, c sdk.Call) []string {
-	words := append([]string{}, defaultWords...)
 	mu.Lock()
+	removed := loadRemoved(ctx, c)
+	words := make([]string, 0, len(defaultWords)+len(loadWords(ctx, c)))
+	for _, w := range defaultWords {
+		if !containsWord(removed, w) {
+			words = append(words, w)
+		}
+	}
 	words = append(words, loadWords(ctx, c)...)
 	mu.Unlock()
 	return words
@@ -141,7 +204,35 @@ func loadWords(ctx context.Context, c sdk.Call) []string {
 	return words
 }
 
-func wordsKey(gid string) string { return "words:" + gid }
+func loadRemoved(ctx context.Context, c sdk.Call) []string {
+	var words []string
+	_ = sdk.LoadJSON(ctx, c.State, removedKey(c.Event.GroupID), &words)
+	return words
+}
+
+func wordsKey(gid string) string   { return "words:" + gid }
+func removedKey(gid string) string { return "words_removed:" + gid }
+
+func isDefaultWord(word string) bool { return containsWord(defaultWords, word) }
+
+func containsWord(list []string, word string) bool {
+	for _, w := range list {
+		if w == word {
+			return true
+		}
+	}
+	return false
+}
+
+func removeWord(list []string, word string) []string {
+	kept := list[:0]
+	for _, w := range list {
+		if w != word {
+			kept = append(kept, w)
+		}
+	}
+	return kept
+}
 
 func normalize(s string) string {
 	s = strings.TrimSpace(s)

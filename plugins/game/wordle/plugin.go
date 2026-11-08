@@ -1,17 +1,37 @@
 // Package wordle 猜单词（文本版）。上游用图片绘制色块并通过翻译接口给出中文释义，
-// 这里改为文本反馈，词表内嵌在插件中。
+// 这里改为文本反馈；题库使用上游 CET-4 词表，校验词典使用上游 dict 词表，均内嵌。
 package wordle
 
 import (
 	"context"
+	_ "embed"
 	"math/rand"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
+)
+
+// CET-4 题库与校验词典均来自上游 Wordle 数据。
+var (
+	//go:embed cet4_5.txt
+	cet4Five string
+	//go:embed cet4_6.txt
+	cet4Six string
+	//go:embed cet4_7.txt
+	cet4Seven string
+
+	//go:embed dict_5.txt
+	dictFive string
+	//go:embed dict_6.txt
+	dictSix string
+	//go:embed dict_7.txt
+	dictSeven string
 )
 
 var (
@@ -21,15 +41,24 @@ var (
 
 	startRe = regexp.MustCompile(`^(个人|团队)(五阶|六阶|七阶)?猜单词$`)
 	guessRe = regexp.MustCompile(`^[a-zA-Z]{5,7}$`)
+
+	// newReminder 便于测试关闭或捕获 105 秒提醒。
+	newReminder = func(d time.Duration, f func()) *time.Timer { return time.AfterFunc(d, f) }
 )
 
-const gameTimeout = 2 * time.Minute
+const (
+	gameTimeout = 2 * time.Minute
+	// reminderLead 是「还有 15 秒」提醒的提前量。
+	reminderLead = 15 * time.Second
+)
 
 var classMap = map[string]int{"": 5, "五阶": 5, "六阶": 6, "七阶": 7}
 
 type session struct {
 	Word     string   `json:"word"`
 	Owner    string   `json:"owner,omitempty"`
+	Mode     string   `json:"mode,omitempty"`
+	Class    string   `json:"class,omitempty"`
 	Tries    int      `json:"tries"`
 	Guesses  []string `json:"guesses,omitempty"`
 	Deadline int64    `json:"deadline"`
@@ -38,12 +67,13 @@ type session struct {
 
 // Definition subscribes to group messages for 猜单词.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "wordle",
 		Name:        "猜单词",
 		Version:     "1.0.0",
 		Description: "发送「个人猜单词」或「团队猜单词」开始猜英文单词，支持五/六/七阶",
-	}, sdk.MessageEvents, Handle, sdk.WithPermissions("state.read", "state.write"))
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{{Name: "wordle", Trigger: "个人猜单词"}},
+		sdk.WithPermissions("state.read", "state.write"))
 }
 
 // Handle starts a game or processes a letter-only guess.
@@ -59,13 +89,16 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	mu.Lock()
 	s := load(ctx, c)
 	mu.Unlock()
-	if !s.Active {
-		return nil
-	}
 	if s.Owner != "" && s.Owner != c.Event.UserID {
 		return nil
 	}
-	if text == "结束猜单词" {
+	if text == "再来一局" {
+		return restart(ctx, c, s)
+	}
+	if !s.Active {
+		return nil
+	}
+	if text == "结束猜单词" || text == "结束" {
 		return endGame(ctx, c, s, "游戏已结束")
 	}
 	if !guessRe.MatchString(text) {
@@ -77,6 +110,10 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	word := strings.ToLower(text)
 	if len(word) != len(s.Word) {
 		return c.Reply(ctx, "单词长度错误")
+	}
+	// 与上游一致：先判断是否命中答案，其余猜测必须存在于词典中。
+	if word != s.Word && !inDict(len(word), word) {
+		return c.Reply(ctx, "你确定存在这样的单词吗？")
 	}
 
 	mu.Lock()
@@ -109,7 +146,23 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	default:
 		b.WriteString("剩余次数: " + strconv.Itoa(tries-len(guesses)))
 	}
-	return c.Reply(ctx, b.String())
+	return c.ReplyKeyboardOrText(ctx, b.String(), gameKeyboard())
+}
+
+// gameKeyboard 对局下方的快捷按钮。
+func gameKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(
+		sdk.CommandButton("wordle-again", "再来一局", "再来一局"),
+		sdk.CommandButton("wordle-stop", "结束", "结束猜单词"),
+	))
+}
+
+// restart 「再来一局」：沿用上一局的模式与阶数重新开始。
+func restart(ctx context.Context, c sdk.Call, s session) error {
+	if s.Mode == "" {
+		return c.Reply(ctx, "先发送「个人猜单词」或「团队猜单词」开始一局")
+	}
+	return startGame(ctx, c, s.Mode, s.Class)
 }
 
 func startGame(ctx context.Context, c sdk.Call, mode, classText string) error {
@@ -132,6 +185,8 @@ func startGame(ctx context.Context, c sdk.Call, mode, classText string) error {
 	s = session{
 		Word:     candidates[pick(len(candidates))],
 		Owner:    owner,
+		Mode:     mode,
+		Class:    classText,
 		Tries:    class + 1,
 		Deadline: nowFunc().Add(gameTimeout).Unix(),
 		Active:   true,
@@ -142,8 +197,9 @@ func startGame(ctx context.Context, c sdk.Call, mode, classText string) error {
 	if err != nil {
 		return err
 	}
-	return c.Reply(ctx, strconv.Itoa(tries)+"次机会猜出单词，单词长度为"+strconv.Itoa(class)+"，请发送单词\n"+
-		"√ 位置正确，△ 字母存在但位置不对，× 不存在")
+	scheduleReminder(c, s)
+	return c.ReplyKeyboardOrText(ctx, strconv.Itoa(tries)+"次机会猜出单词，单词长度为"+strconv.Itoa(class)+"，请发送单词\n"+
+		"√ 位置正确，△ 字母存在但位置不对，× 不存在", gameKeyboard())
 }
 
 func endGame(ctx context.Context, c sdk.Call, s session, prefix string) error {
@@ -155,7 +211,24 @@ func endGame(ctx context.Context, c sdk.Call, s session, prefix string) error {
 		_ = save(ctx, c, cur)
 	}
 	mu.Unlock()
-	return c.Reply(ctx, prefix+"...答案是: "+answer)
+	return c.ReplyKeyboardOrText(ctx, prefix+"...答案是: "+answer, gameKeyboard())
+}
+
+// scheduleReminder 在 105 秒时提醒还有 15 秒作答时间。
+// 答案翻译依赖上游的在线翻译接口，宿主 SDK 未提供翻译能力，故只展示英文答案。
+func scheduleReminder(c sdk.Call, s session) {
+	newReminder(gameTimeout-reminderLead, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		mu.Lock()
+		cur := load(ctx, c)
+		active := cur.Active && cur.Word == s.Word && cur.Deadline == s.Deadline && nowFunc().Unix() <= cur.Deadline
+		mu.Unlock()
+		if !active {
+			return
+		}
+		_ = c.Reply(ctx, "猜单词，你还有15s作答时间")
+	})
 }
 
 func stateKey(c sdk.Call) string { return "wordle:" + c.Event.GroupID }
@@ -241,36 +314,42 @@ func marks(m []int) string {
 	return b.String()
 }
 
-var words5 = []string{
-	"about", "above", "actor", "adapt", "admit", "adopt", "adult", "after", "again", "agent",
-	"agree", "ahead", "alarm", "album", "alert", "alike", "alive", "allow", "alone", "along",
-	"alter", "among", "anger", "angle", "angry", "apart", "apple", "apply", "arena", "argue",
-	"arise", "array", "aside", "asset", "avoid", "awake", "award", "aware", "badly", "baker",
-	"basic", "beach", "began", "begin", "being", "below", "bench", "birth", "black", "blame",
-	"blind", "block", "blood", "board", "brain", "brand", "bread", "break", "bring", "broad",
-	"brown", "build", "built", "cable", "carry", "catch", "cause", "chain", "chair", "chart",
-	"chase", "cheap", "check", "chest", "child", "chose", "civil", "claim", "class", "clean",
-	"clear", "climb", "clock", "close", "cloud", "coach", "coast", "could", "count", "court",
-	"cover", "crack", "craft", "crash", "crazy", "cream", "crime", "cross", "crowd", "crown",
-	"curve", "cycle",
+// splitWords 按行切分内嵌词表，忽略空白行。
+func splitWords(data string) []string {
+	lines := strings.Split(data, "\n")
+	words := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if w := strings.TrimSpace(line); w != "" {
+			words = append(words, w)
+		}
+	}
+	return words
 }
 
-var words6 = []string{
-	"animal", "around", "answer", "appear", "arrive", "artist", "aspect", "attack", "autumn", "basket",
-	"battle", "beauty", "become", "before", "behind", "better", "beyond", "bishop", "bottle", "bottom",
-	"branch", "breath", "bridge", "bright", "broken", "budget", "butter", "camera", "cancer", "carbon",
-	"castle", "center", "change", "charge", "choice", "church", "circle", "client", "closed", "coffee",
-	"column", "combat", "common", "corner", "cotton", "county", "course", "cousin", "danger", "dealer",
-	"debate", "decide", "degree", "demand", "desert", "design", "desire", "detail", "device", "dinner",
-	"doctor", "dollar", "double", "driver", "easily", "effect", "eleven", "empire", "energy", "engine",
-	"enough", "escape", "except", "excuse", "family", "famous", "father", "fellow", "female", "figure",
-	"finger", "flight", "flower", "forest", "forget", "former", "friend", "future", "garden", "gather",
-	"gender", "ground", "growth", "guilty", "health", "height", "highly", "theory",
+var (
+	words5 = splitWords(cet4Five)
+	words6 = splitWords(cet4Six)
+	words7 = splitWords(cet4Seven)
+
+	dicts5 = splitWords(dictFive)
+	dicts6 = splitWords(dictSix)
+	dicts7 = splitWords(dictSeven)
+)
+
+func dictOfLength(n int) []string {
+	switch n {
+	case 6:
+		return dicts6
+	case 7:
+		return dicts7
+	default:
+		return dicts5
+	}
 }
 
-var words7 = []string{
-	"ability", "account", "achieve", "acquire", "address", "advance", "against", "already", "ancient", "another",
-	"article", "balance", "battery", "because", "believe", "benefit", "between", "brother", "capital", "century",
-	"certain", "chamber", "chapter", "college", "comment", "company", "compare", "project", "service", "support",
-	"tonight", "trouble", "various", "without", "working",
+// inDict 用二分查找校验单词是否在对应阶词典中。
+func inDict(n int, word string) bool {
+	list := dictOfLength(n)
+	i := sort.SearchStrings(list, word)
+	return i < len(list) && list[i] == word
 }

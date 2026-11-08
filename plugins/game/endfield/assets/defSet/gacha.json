@@ -1,0 +1,14 @@
+{
+  "banner_info": {
+    "source": "backend_api"
+  },
+  "simulate": {
+    "enable": true,
+    "group_whitelist": [],
+    "daily_limit": {
+      "limited": 0,
+      "standard": 0,
+      "weapon": 0
+    }
+  }
+}

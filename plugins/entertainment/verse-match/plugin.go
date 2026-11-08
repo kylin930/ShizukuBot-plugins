@@ -3,6 +3,7 @@ package versematch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,8 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
+
+// errNoCouplet 表示上游页面可访问但没有解析到下联。
+var errNoCouplet = errors.New("未能找到合适的下联")
 
 // poetURL 与上游一致，测试可替换。
 var poetURL = "https://ai-poet.com/"
@@ -23,33 +28,56 @@ var (
 	couplet = regexp.MustCompile(`下联：(.+?)</p>`)
 )
 
-// Definition subscribes to the 「对对联」 trigger.
+// Definition subscribes to the 「verse-match」「对对联」 triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "verse-match",
 		Name:        "对对联",
 		Version:     "1.0.0",
-		Description: "发送「对对联 上联」，返回匹配的下联",
-	}, sdk.MessageEvents, Handle)
+		Description: "发送「verse-match 上联」或「对对联 上联」，返回匹配的下联",
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "verse-match", Trigger: "verse-match"},
+	})
+}
+
+// commandArg 解析「verse-match 上联」与别名「对对联 上联」。
+func commandArg(text string) (string, bool) {
+	for _, cmd := range []string{"verse-match", "对对联"} {
+		if arg, ok := sdk.MatchPrefix(text, cmd); ok {
+			return arg, true
+		}
+	}
+	return "", false
 }
 
 // Handle validates the upper line and replies with the matched lower line.
 func Handle(ctx context.Context, c sdk.Call) error {
-	upper, ok := sdk.MatchPrefix(sdk.Text(c.Event), "对对联")
+	upper, ok := commandArg(sdk.Text(c.Event))
 	if !ok {
 		return nil
 	}
 	if upper == "" {
-		return c.Reply(ctx, "用法：对对联 春风又绿江南岸")
+		return c.Reply(ctx, "用法：verse-match 春风又绿江南岸")
 	}
 	if !chinese.MatchString(upper) {
 		return c.Reply(ctx, "请不要输入英文或空格哦~")
 	}
-	lower, err := fetchLower(ctx, upper)
-	if err != nil {
-		return c.Reply(ctx, "请求过程中发生错误，请稍后再试")
+	if err := c.Reply(ctx, "正在对联中..."); err != nil {
+		return err
 	}
-	return c.Reply(ctx, "▲上联:"+upper+"\n================\n▼下联:"+lower)
+	lower, err := fetchLower(ctx, upper)
+	if errors.Is(err, errNoCouplet) {
+		return c.Reply(ctx, "未能找到合适的下联。")
+	}
+	if err != nil {
+		return c.Reply(ctx, "请求过程中发生错误，请稍后再试。")
+	}
+	text := "▲上联:" + upper + "\n================\n▼下联:" + lower +
+		"\n\n来源：[对联网](https://ai-poet.com/)"
+	if err := c.ReplyMarkdown(ctx, text); err != nil {
+		return c.Reply(ctx, text)
+	}
+	return nil
 }
 
 func fetchLower(ctx context.Context, upper string) (string, error) {
@@ -71,7 +99,7 @@ func fetchLower(ctx context.Context, upper string) (string, error) {
 	}
 	match := couplet.FindStringSubmatch(string(body))
 	if len(match) < 2 {
-		return "", fmt.Errorf("未能找到合适的下联")
+		return "", errNoCouplet
 	}
 	return strings.TrimSpace(match[1]), nil
 }

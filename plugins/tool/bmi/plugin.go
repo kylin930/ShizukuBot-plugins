@@ -3,6 +3,7 @@ package bmi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -12,7 +13,7 @@ import (
 )
 
 // 移植自 koishi-plugin-bmi-calculator，提示语取自其默认配置。
-var advice = map[string][]string{
+var defaultAdvice = map[string][]string{
 	"underweight": {
 		"您的体重稍轻，请适度增加营养摄入。",
 		"为了更好的健康，可以尝试多食用一些富含营养的食物。",
@@ -57,14 +58,78 @@ var advice = map[string][]string{
 	},
 }
 
-// Definition registers /bmi.
+// adviceKeys 与上游配置项顺序一致。
+var adviceKeys = []string{
+	"underweight", "normal", "overweight",
+	"moderately_obese", "severely_obese", "very_severely_obese",
+}
+
+// Definition 同时注册 bmi 与 bmi-calculator 两个命令名，
+// 对齐上游 bmi-calculator 指令并保留原命令。
 func Definition() sdk.Definition {
-	return sdk.CommandPlugin(sdk.Meta{
+	return sdk.Define(sdk.Meta{
 		ID:          "bmi",
 		Name:        "BMI 计算",
 		Version:     "1.0.0",
-		Description: "计算 BMI 并给出健康建议：/bmi 身高(cm) 体重(斤)",
-	}, "bmi", Handle)
+		Description: "计算 BMI 并给出健康建议：/bmi 身高(cm) 体重(斤)，/bmi-calculator 同义",
+	}, func(h sdk.Registrar) error {
+		if err := h.Command("bmi", Handle); err != nil {
+			return err
+		}
+		return h.Command("bmi-calculator", Handle)
+	}, sdk.WithConfig(configSchema()))
+}
+
+func configSchema() sdk.Schema {
+	properties := make(map[string]sdk.Schema, len(adviceKeys))
+	for _, key := range adviceKeys {
+		properties[key] = sdk.Schema{
+			Type:        "array",
+			Description: "【" + key + "】的提示语",
+			Items:       &sdk.Schema{Type: "string"},
+			Default:     defaultJSON(defaultAdvice[key]),
+		}
+	}
+	return sdk.Schema{Type: "object", Properties: properties}
+}
+
+func defaultJSON(items []string) json.RawMessage {
+	data, _ := json.Marshal(items)
+	return data
+}
+
+// adviceFromConfig 读取配置中的六档提示语，缺失或为空时回退默认值。
+func adviceFromConfig(config map[string]any) map[string][]string {
+	out := make(map[string][]string, len(defaultAdvice))
+	for key, value := range defaultAdvice {
+		out[key] = value
+	}
+	if config == nil {
+		return out
+	}
+	for _, key := range adviceKeys {
+		items := stringList(config[key])
+		if len(items) > 0 {
+			out[key] = items
+		}
+	}
+	return out
+}
+
+func stringList(value any) []string {
+	switch v := value.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 // Handle validates the two numeric arguments and replies BMI plus advice.
@@ -87,7 +152,7 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	if math.IsNaN(value) || value < 10 || value > 100 {
 		return c.Reply(ctx, "计算出的 BMI 数值异常，请检查输入是否准确。")
 	}
-	return c.Reply(ctx, fmt.Sprintf("您的BMI指数为%.1f。\n%s", value, adviceFor(value)))
+	return c.Reply(ctx, fmt.Sprintf("您的BMI指数为%.1f。\n%s", value, adviceFor(value, adviceFromConfig(c.Config))))
 }
 
 func calculate(height, weight int) float64 {
@@ -96,7 +161,8 @@ func calculate(height, weight int) float64 {
 	return kg / (m * m)
 }
 
-func adviceFor(value float64) string {
+// adviceFor 按上游 24.9/29.9/34.9 边界选择建议档位。
+func adviceFor(value float64, advice map[string][]string) string {
 	var key string
 	switch {
 	case value < 18.5:
@@ -113,5 +179,8 @@ func adviceFor(value float64) string {
 		key = "very_severely_obese"
 	}
 	list := advice[key]
+	if len(list) == 0 {
+		list = defaultAdvice[key]
+	}
 	return list[rand.Intn(len(list))]
 }

@@ -62,3 +62,37 @@ func TestNonMatch(t *testing.T) {
 		t.Fatal("unexpected reply")
 	}
 }
+
+func TestHolidayCountdowns(t *testing.T) {
+	freeze(t, time.Date(2026, 11, 8, 10, 0, 0, 0, time.Local))
+	got, replied := reply(t, "摸鱼提醒")
+	if !replied {
+		t.Fatal("no reply")
+	}
+	for _, name := range []string{"元旦", "春节", "清明节", "劳动节", "端午节", "中秋节", "国庆节"} {
+		if !strings.Contains(got, "距离"+name+"还有: ") {
+			t.Fatalf("reply missing %s countdown: %q", name, got)
+		}
+	}
+	// 2026-11-08 时最近的节日是 2027 元旦。
+	if !strings.Contains(got, "距离元旦还有: ") {
+		t.Fatalf("reply missing 元旦 countdown: %q", got)
+	}
+}
+
+func TestHolidayStates(t *testing.T) {
+	freeze(t, time.Date(2026, 12, 31, 12, 0, 0, 0, time.Local))
+	if got := holidayText("元旦", nowFunc()); !strings.Contains(got, "距离元旦还有: 0.50天！") {
+		t.Fatalf("countdown = %q", got)
+	}
+
+	freeze(t, time.Date(2027, 1, 2, 12, 0, 0, 0, time.Local))
+	if got := holidayText("元旦", nowFunc()); got != "好好享受 元旦 假期吧!" {
+		t.Fatalf("during holiday = %q", got)
+	}
+
+	freeze(t, time.Date(2027, 12, 31, 12, 0, 0, 0, time.Local))
+	if got := holidayText("元旦", nowFunc()); got != "今年 元旦 假期已过" {
+		t.Fatalf("after holiday = %q", got)
+	}
+}

@@ -5,8 +5,17 @@ import (
 	"context"
 	"math/rand/v2"
 	"strings"
+	"sync"
+	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
+)
+
+const (
+	// limitBurst 与上游 ctxext.LimitByUser 一致：每 10 秒最多 5 次。
+	limitBurst  = 5
+	limitWindow = 10 * time.Second
 )
 
 var (
@@ -53,16 +62,31 @@ var (
 	}
 	// pickIndex 可在测试中替换。
 	pickIndex = rand.IntN
+	// nowFunc 与 sleepFunc 可在测试中替换，保证单元测试离线且不真实等待。
+	nowFunc = time.Now
+	// sleepFunc 复刻上游 process.SleepAbout1sTo2s 的 1–2 秒随机延迟。
+	sleepFunc = func(ctx context.Context) error {
+		timer := time.NewTimer(time.Duration(1000+rand.IntN(1001)) * time.Millisecond)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	limitMu   sync.Mutex
+	limitHits = map[string][]time.Time{}
 )
 
 // Definition subscribes to message events for the curse triggers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "curse",
 		Name:        "骂人反击",
 		Version:     "1.0.0",
 		Description: "发送「骂我」「大力骂我」，或 @机器人辱骂，返回内置回击语录",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{{Name: "curse", Trigger: "骂我"}})
 }
 
 // Handle 处理「骂我」「大力骂我」，以及 @机器人并带辱骂关键词时的回击。
@@ -70,9 +94,21 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	text := sdk.Text(c.Event)
 	switch {
 	case sdk.MatchFull(text, "大力骂我"):
-		return c.Reply(ctx, pick(maxLevel))
+		if !allowUser(c.Event.UserID, nowFunc()) {
+			return nil
+		}
+		if sleepFunc(ctx) != nil {
+			return nil
+		}
+		return c.ReplyKeyboardOrText(ctx, pick(maxLevel), maxKeyboard())
 	case sdk.MatchFull(text, "骂我"):
-		return c.Reply(ctx, pick(minLevel))
+		if !allowUser(c.Event.UserID, nowFunc()) {
+			return nil
+		}
+		if sleepFunc(ctx) != nil {
+			return nil
+		}
+		return c.ReplyKeyboardOrText(ctx, pick(minLevel), minKeyboard())
 	}
 	if sdk.Mentioned(c.Event) && containsAny(text, keywords) {
 		return c.Reply(ctx, pick(maxLevel))
@@ -80,7 +116,37 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	return nil
 }
 
+// minKeyboard 普通档回击后的「再骂一句」按钮。
+func minKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(sdk.CommandButton("curse-more", "再骂一句", "骂我")))
+}
+
+// maxKeyboard 大力档回击后的「大力骂」按钮。
+func maxKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(sdk.CommandButton("curse-heavy", "大力骂", "大力骂我")))
+}
+
 func pick(lines []string) string { return lines[pickIndex(len(lines))] }
+
+// allowUser 按用户做滑动窗口限频，超出后静默丢弃。
+func allowUser(userID string, now time.Time) bool {
+	limitMu.Lock()
+	defer limitMu.Unlock()
+	cutoff := now.Add(-limitWindow)
+	hits := limitHits[userID]
+	kept := hits[:0]
+	for _, hit := range hits {
+		if hit.After(cutoff) {
+			kept = append(kept, hit)
+		}
+	}
+	if len(kept) >= limitBurst {
+		limitHits[userID] = kept
+		return false
+	}
+	limitHits[userID] = append(kept, now)
+	return true
+}
 
 func containsAny(text string, words []string) bool {
 	for _, word := range words {

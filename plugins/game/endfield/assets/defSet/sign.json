@@ -1,0 +1,8 @@
+{
+  "auto_sign": true,
+  "auto_sign_cron": "0 0 1 * * ?",
+  "notify_list": {
+    "friend": [],
+    "group": []
+  }
+}

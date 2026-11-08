@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -13,12 +14,14 @@ var trigger = regexp.MustCompile(`^翻转\s*([A-Za-z\s]*)$`)
 
 // Definition subscribes to the 「翻转 xxx」 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "chrev",
 		Name:        "英文字符翻转",
 		Version:     "1.0.0",
 		Description: "发送「翻转 I love you」，返回倒序且上下翻转的英文",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "chrev", Trigger: "翻转"},
+	})
 }
 
 // Handle reverses the matched English text and maps each character to its

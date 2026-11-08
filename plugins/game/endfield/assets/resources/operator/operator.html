@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1260, initial-scale=1.0">
+  <title>{{name}} - 终末地干员面板</title>
+  <link rel="stylesheet" href="{{_res_path}}operator/operator.css">
+</head>
+<body>
+  <div class="operator-sheet">
+    <div class="operator-layout">
+      <aside class="portrait-panel">
+        <div class="portrait-corner-icons">
+          {{if professionIconUrl}}
+          <div class="portrait-corner-icon is-primary">
+            <img src="{{professionIconUrl}}" alt="{{profession}}" class="portrait-corner-icon-img">
+          </div>
+          {{/if}}
+          {{if propertyIconUrl}}
+          <div class="portrait-corner-icon is-secondary">
+            <img src="{{propertyIconUrl}}" alt="{{property}}" class="portrait-corner-icon-img">
+          </div>
+          {{/if}}
+          {{if potentialLevel > 0}}
+          <div class="portrait-corner-icon is-potential">
+            <img
+              src="{{pluResPath}}meta/potential/P{{potentialLevel}}.png"
+              alt="潜能 {{potentialLevel}}"
+              class="portrait-corner-icon-img portrait-corner-potential-img"
+              onerror="this.style.display='none'">
+          </div>
+          {{/if}}
+        </div>
+
+        <div class="portrait-visual-wrap">
+          <div class="portrait-topography"></div>
+          <img src="{{illustrationUrl}}" alt="{{name}}" class="portrait-image" onerror="this.style.display='none'">
+        </div>
+
+        <div class="portrait-bottom">
+          <div class="portrait-identity-row">
+            <div class="portrait-identity-main">
+              <div class="portrait-name">{{name}}</div>
+              <div class="portrait-level-badge">Lv.{{if friendPanel}}{{friendPanel.level}}{{else}}{{level}}{{/if}}</div>
+            </div>
+
+            <div class="portrait-right-stack">
+              <div class="portrait-phase-badge" title="{{if friendPanel && friendPanel.promotionName}}{{friendPanel.promotionName}}{{else}}精英化 {{evolvePhase}}{{/if}}">
+                <img
+                  src="{{pluResPath}}meta/phases/icon_elitemarker_0{{evolvePhase}}.png"
+                  alt="精英化 {{evolvePhase}}"
+                  class="portrait-phase-badge-icon"
+                  onerror="this.style.display='none'">
+              </div>
+              <div class="portrait-stars portrait-stars-row">
+                {{each stars}}
+                <img src="{{pluResPath}}meta/potential/star.png" alt="星级" class="portrait-star-icon">
+                {{/each}}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+      <main class="operator-content">
+        <section class="operator-section">
+          <div class="section-head">
+            <span class="section-mark"></span>
+            <span class="section-title">OPERATOR STATISTICS</span>
+          </div>
+          <div class="section-card stats-card">
+            {{if friendPanel}}
+            <div class="stats-grid stats-grid-primary">
+              <div class="stat-item"><span class="stat-label">最大生命值</span><strong class="stat-value">{{friendPanel.core.hp}}</strong></div>
+              <div class="stat-item"><span class="stat-label">攻击力</span><strong class="stat-value">{{friendPanel.core.atk}}</strong></div>
+              <div class="stat-item"><span class="stat-label">防御力</span><strong class="stat-value">{{friendPanel.core.def}}</strong></div>
+            </div>
+            <div class="stats-grid stats-grid-secondary">
+              <div class="stat-item"><span class="stat-label">敏捷</span><strong class="stat-value">{{friendPanel.mini.agi}}</strong></div>
+              <div class="stat-item"><span class="stat-label">力量</span><strong class="stat-value">{{friendPanel.mini.str}}</strong></div>
+              <div class="stat-item"><span class="stat-label">智识</span><strong class="stat-value">{{friendPanel.mini.wisd}}</strong></div>
+              <div class="stat-item"><span class="stat-label">意志</span><strong class="stat-value">{{friendPanel.mini.will}}</strong></div>
+              <div class="stat-item"><span class="stat-label">暴击率</span><strong class="stat-value">{{friendPanel.mini.crt || '--'}}</strong></div>
+              <div class="stat-item"><span class="stat-label">暴击伤害</span><strong class="stat-value">{{friendPanel.mini.cdmg || '--'}}</strong></div>
+            </div>
+            <div class="stats-grid stats-grid-tertiary">
+              <div class="stat-item"><span class="stat-label">终结技能量效率</span><strong class="stat-value">{{friendPanel.chargeEfficiency || '--'}}</strong></div>
+              <div class="stat-item"><span class="stat-label">源石技艺强度</span><strong class="stat-value">{{friendPanel.artsStrength || '--'}}</strong></div>
+            </div>
+            {{else}}
+            <div class="stats-grid stats-grid-basic">
+              {{each identityChips chip}}
+              <div class="stat-item"><span class="stat-label">{{chip.label}}</span><strong class="stat-value">{{chip.value}}</strong></div>
+              {{/each}}
+              <div class="stat-item"><span class="stat-label">等级</span><strong class="stat-value">{{level}}</strong></div>
+              <div class="stat-item"><span class="stat-label">潜能</span><strong class="stat-value">{{potentialLevel}}</strong></div>
+            </div>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="operator-section">
+          <div class="section-head">
+            <span class="section-mark"></span>
+            <span class="section-title">ACTIVE SKILLS</span>
+          </div>
+          <div class="section-card skill-card-wrap">
+            {{if renderSkills && renderSkills.length > 0}}
+            <div class="skill-grid">
+              {{each renderSkills skill}}
+              <div class="skill-card">
+                <div class="skill-icon-box">
+                  <img src="{{skill.iconUrl}}" alt="{{skill.name}}" class="skill-icon" onerror="this.style.display='none'">
+                </div>
+                <div class="skill-copy">
+                  <div class="skill-name">{{skill.name}}</div>
+                  <div class="skill-type">SKILL {{$index + 1}}{{if skill.type}} · {{skill.type}}{{/if}}</div>
+                </div>
+                <div class="skill-level-badge">Lv.{{skill.level}}{{if skill.maxLevel}} / {{skill.maxLevel}}{{/if}}</div>
+              </div>
+              {{/each}}
+            </div>
+            {{else}}
+            <div class="section-empty">暂无技能信息</div>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="operator-section">
+          <div class="section-head">
+            <span class="section-mark"></span>
+            <span class="section-title">WEAPON</span>
+          </div>
+          <div class="section-card weapon-section-card">
+            {{if weaponCard}}
+            <div class="weapon-card">
+              <div class="weapon-main">
+                <div class="weapon-art-box">
+                  {{if weaponCard.iconUrl}}
+                  <img src="{{weaponCard.iconUrl}}" alt="{{weaponCard.name}}" class="weapon-art" onerror="this.style.display='none'">
+                  {{/if}}
+                </div>
+                <div class="weapon-copy">
+                  <div class="weapon-meta-line">{{weaponCard.meta || weaponType || '武器'}}</div>
+                  <div class="weapon-name-line">
+                    <span class="weapon-name">{{weaponCard.name}}</span>
+                    {{if weaponCard.level !== ''}}<span class="weapon-level">Lv.{{weaponCard.level}}</span>{{/if}}
+                  </div>
+                  <div class="weapon-stars">
+                    {{each weaponCard.stars}}
+                    <img src="{{pluResPath}}meta/potential/star.png" alt="星级" class="weapon-star-icon">
+                    {{/each}}
+                  </div>
+                  <div class="weapon-chip-line">
+                    {{if weaponCard.note}}<span class="weapon-chip">{{weaponCard.note}}</span>{{/if}}
+                    {{if weapon && weapon.breakthroughLevel > 0}}<span class="weapon-chip">突破 {{weapon.breakthroughLevel}}</span>{{/if}}
+                  </div>
+                </div>
+              </div>
+              <div class="weapon-stats">
+                {{if weaponCard.affixes && weaponCard.affixes.length > 0}}
+                {{each weaponCard.affixes aff}}
+                {{if aff.name}}
+                <div class="weapon-stat-row">
+                  <span class="weapon-stat-label">{{aff.name}}</span>
+                  <strong class="weapon-stat-value">{{if aff.value}}{{aff.value}}{{else}}--{{/if}}</strong>
+                </div>
+                {{/if}}
+                {{/each}}
+                {{else}}
+                <div class="weapon-empty">暂无武器词条</div>
+                {{/if}}
+              </div>
+            </div>
+            {{else}}
+            <div class="section-empty">未装备武器</div>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="operator-section">
+          <div class="section-head">
+            <span class="section-mark"></span>
+            <span class="section-title">EQUIPMENT</span>
+          </div>
+          <div class="section-card">
+            {{if equipmentCards && equipmentCards.length > 0}}
+            <div class="equipment-grid">
+              {{each equipmentCards card}}
+              <div class="equipment-card {{if card.rarityClass}}{{card.rarityClass}}{{/if}}" data-rarity="{{if card.rarity}}{{card.rarity}}{{else}}0{{/if}}">
+                <div class="equipment-card-main">
+                  <div class="equipment-icon-box">
+                    {{if card.iconUrl}}
+                    <img src="{{card.iconUrl}}" alt="{{card.name}}" class="equipment-icon" onerror="this.style.display='none'">
+                    {{/if}}
+                  </div>
+                  <div class="equipment-copy">
+                    <div class="equipment-slot-line">
+                      <span class="equipment-slot">{{card.slotLabel}}</span>
+                      {{if card.level !== ''}}<span class="equipment-level">Lv.{{card.level}}</span>{{/if}}
+                    </div>
+                    <div class="equipment-name">{{card.name}}</div>
+                    {{if card.meta}}<div class="equipment-meta">{{card.meta}}</div>{{/if}}
+                  </div>
+                </div>
+                <div class="equipment-attrs">
+                  {{if card.affixes && card.affixes.length > 0}}
+                  {{each card.affixes aff}}
+                  {{if !aff.empty && aff.name}}
+                  <div class="equipment-attr-row">
+                    <span class="equipment-attr-label">{{aff.name}}</span>
+                    <strong class="equipment-attr-value">{{if aff.value}}{{aff.value}}{{else}}--{{/if}}</strong>
+                  </div>
+                  {{/if}}
+                  {{/each}}
+                  {{/if}}
+                </div>
+              </div>
+              {{/each}}
+            </div>
+            {{else}}
+            <div class="section-empty">暂无装备信息</div>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="operator-section">
+          <div class="section-head">
+            <span class="section-mark"></span>
+            <span class="section-title">RECOVERY</span>
+          </div>
+          <div class="section-card">
+            {{if recoveryItem && recoveryItem.name}}
+            <div class="recovery-card">
+              <div class="recovery-icon-box">
+                {{if recoveryItem.iconUrl}}
+                <img src="{{recoveryItem.iconUrl}}" alt="{{recoveryItem.name}}" class="recovery-icon" onerror="this.style.display='none'">
+                {{else}}
+                <div class="recovery-placeholder"></div>
+                {{/if}}
+              </div>
+              <div class="recovery-copy">
+                <div class="recovery-name">{{recoveryItem.name}}</div>
+                <div class="recovery-tag">{{recoveryItem.tag || '恢复'}}</div>
+                <div class="recovery-desc">{{if recoveryItem.desc}}{{recoveryItem.desc}}{{else}}当前详细面板未提供更多恢复道具说明。{{/if}}</div>
+              </div>
+            </div>
+            {{else}}
+            <div class="section-empty">暂无恢复道具信息</div>
+            {{/if}}
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <footer class="operator-footer">
+      <div class="operator-footer-copy">{{@copyright || sys?.copyright}}</div>
+    </footer>
+  </div>
+</body>
+</html>

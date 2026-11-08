@@ -1,2 +1,46 @@
 # 原始插件源码仅本地保留，用于移植参考，不纳入仓库
 sources/
+
+# ===== 编译产物 =====
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+*.cover
+*.prof
+
+# ===== Go =====
+/vendor/
+
+# ===== 本地截图 / 调试 / 临时文件 =====
+.screenshots/
+*.log
+*.tmp
+.tmp/
+tmp/
+
+# ===== IDE / 工具 =====
+.trae/
+.arts/
+.codeartsdoer/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== Python（本地脚本）=====
+__pycache__/
+*.py[cod]
+.venv/
+venv/

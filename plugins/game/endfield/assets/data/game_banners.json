@@ -1,0 +1,159 @@
+{
+  "permanent_weapons": [
+    {
+      "pool_name": "坚冰申领",
+      "weapon_name": "赫拉芬格"
+    },
+    {
+      "pool_name": "星声申领",
+      "weapon_name": "沧溟星梦"
+    },
+    {
+      "pool_name": "远途申领",
+      "weapon_name": "不知归"
+    },
+    {
+      "pool_name": "崇山申领",
+      "weapon_name": "负山"
+    },
+    {
+      "pool_name": "雷鸣申领",
+      "weapon_name": "大雷斑"
+    }
+  ],
+  "up_characters": [
+    {
+      "pool_name": "晨星于此闪耀",
+      "character_name": "梨诺",
+      "start_time": "08.09 12:00",
+      "end_time": "08.31 06:00"
+    },
+    {
+      "pool_name": "临渊望北",
+      "character_name": "决",
+      "start_time": "07.16 12:00",
+      "end_time": "08.09 11:59"
+    },
+    {
+      "pool_name": "逐罪者",
+      "character_name": "卡缪",
+      "start_time": "06.26 12:00",
+      "end_time": "07.16 6:00"
+    },
+    {
+      "pool_name": "拳出无悔",
+      "character_name": "弭弗",
+      "start_time": "06.05 12:00",
+      "end_time": "06.26 11:59"
+    },
+    {
+      "pool_name": "辉光庆典",
+      "character_names": [
+        "骏卫",
+        "洁尔佩塔",
+        "莱万汀",
+        "艾尔黛拉"
+      ],
+      "start_time": "05.14 12:00",
+      "end_time": "06.05 06:00"
+    },
+    {
+      "pool_name": "春雷动，万物生",
+      "character_name": "庄方宜",
+      "start_time": "04.17 11:00",
+      "end_time": "05.22 12:00"
+    },
+    {
+      "pool_name": "狼珀",
+      "character_name": "洛茜",
+      "start_time": "03.29 12:00",
+      "end_time": "04.15 06:00"
+    },
+    {
+      "pool_name": "河流的女儿",
+      "character_name": "汤汤",
+      "start_time": "03.12 12:00",
+      "end_time": "03.29 11:59"
+    },
+    {
+      "pool_name": "热烈色彩",
+      "character_name": "伊冯",
+      "start_time": "02.24 12:00",
+      "end_time": "03.12 06:00"
+    },
+    {
+      "pool_name": "轻飘飘的信使",
+      "character_name": "洁尔佩塔",
+      "start_time": "02.07 12:00",
+      "end_time": "02.24 11:59"
+    },
+    {
+      "pool_name": "熔火灼痕",
+      "character_name": "莱万汀",
+      "start_time": "01.22 12:00",
+      "end_time": "02.07 11:59"
+    }
+  ],
+  "up_weapons": [
+    {
+      "pool_name": "明曜申领",
+      "weapon_name": "曜夜的首演",
+      "start_time": "08.09 12:00",
+      "end_time": "08.31 06:00"
+    },
+    {
+      "pool_name": "军列申领",
+      "weapon_name": "四二式·肃阵",
+      "start_time": "07.16 12:00",
+      "end_time": "08.09 11:59"
+    },
+    {
+      "pool_name": "染赤申领",
+      "weapon_name": "镀红祝福",
+      "start_time": "06.26 12:00",
+      "end_time": "07.17 6:00"
+    },
+    {
+      "pool_name": "绛结申领",
+      "weapon_name": "赤缨",
+      "start_time": "06.05 12:00",
+      "end_time": "06.26 11:59"
+    },
+    {
+      "pool_name": "行舟申领",
+      "weapon_name": "孤舟",
+      "start_time": "04.17 11:00",
+      "end_time": "05.22 12:00"
+    },
+    {
+      "pool_name": "绯珀申领",
+      "weapon_name": "狼之绯",
+      "start_time": "03.29 12:00",
+      "end_time": "04.15 06:00"
+    },
+    {
+      "pool_name": "新芽申领",
+      "weapon_name": "落草",
+      "start_time": "03.12 12:00",
+      "end_time": "03.29 11:59"
+    },
+    {
+      "pool_name": "绘涂申领",
+      "weapon_name": "艺术暴君",
+      "start_time": "02.24 12:00",
+      "end_time": "03.12 06:00"
+    },
+    {
+      "pool_name": "迅行申领",
+      "weapon_name": "使命必达",
+      "start_time": "02.07 12:00",
+      "end_time": "02.24 11:59"
+    },
+    {
+      "pool_name": "熔铸申领",
+      "weapon_name": "熔铸火焰",
+      "start_time": "01.22 12:00",
+      "end_time": "02.07 11:59"
+    }
+  ]
+}

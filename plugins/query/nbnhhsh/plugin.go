@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -30,12 +31,14 @@ type guess struct {
 
 // Definition subscribes to the 「?? 缩写」 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "nbnhhsh",
 		Name:        "拼音首字母释义",
 		Version:     "1.0.0",
 		Description: "发送「?? 缩写」，查询该拼音首字母缩写的中文释义",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "nbnhhsh", Trigger: "??"},
+	})
 }
 
 // Handle looks up the abbreviation and replies with its translations.
@@ -50,7 +53,7 @@ func Handle(ctx context.Context, c sdk.Call) error {
 		return c.Reply(ctx, "查询失败: "+err.Error())
 	}
 	if len(values) == 0 {
-		return c.Reply(ctx, keyword+": 没有找到释义")
+		return c.Reply(ctx, keyword+": ")
 	}
 	return c.Reply(ctx, keyword+": "+strings.Join(values, ", "))
 }

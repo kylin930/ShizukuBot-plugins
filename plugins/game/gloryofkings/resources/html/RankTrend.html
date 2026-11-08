@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>{{.Title}}</title>
+  <!-- 基础样式复用 BattleReport.css（已内联），和战报/巅峰趋势保持一致，这里只补段位图特有的增量 -->
+  <style>
+@font-face {
+  font-family: Number;
+  src: url(data:font/woff;base64,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) format("woff");
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: YS, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  width: 1050px;
+  padding: 40px;
+  color: #fff;
+  background: linear-gradient(160deg, #0f1420 0%, #1a2133 100%);
+  position: relative;
+  z-index: 0;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(160deg, rgba(15, 20, 32, 0.9) 0%, rgba(20, 25, 45, 0.94) 100%),
+    url("https://game.gtimg.cn/images/yxzj/img201606/skin/hero-info/152/152-bigskin-8.jpg");
+  background-size: cover;
+  background-position: center top;
+  filter: blur(6px);
+  z-index: -1;
+}
+
+.card {
+  background: rgba(10,14,26,0.55);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 21px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+
+/* 头部 */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 26px;
+  background: linear-gradient(100deg, rgba(245,215,110,0.14), rgba(255,255,255,0.02));
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.avatar {
+  width: 62px; height: 62px;
+  border-radius: 50%;
+  border: 2px solid rgba(245,215,110,0.5);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.username {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  /* 昵称可能很长，别把右边的标题挤出卡片 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.68);
+}
+.report-label {
+  text-align: right;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f5d76e;
+  flex-shrink: 0;
+}
+.report-label .sub {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.42);
+}
+
+/* 四格总览 */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.stat-cell {
+  background: rgba(10,14,26,0.5);
+  padding: 18px 10px;
+  text-align: center;
+}
+.stat-val {
+  font-family: Number, YS, sans-serif;
+  font-size: 34px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+/* 时长这种文字较长的值单独降一档，不然「10小时23分」会换行顶高格子 */
+.stat-val.small { font-size: 22px; padding-top: 8px; }
+.stat-key { font-size: 13px; color: rgba(255,255,255,0.42); }
+.stat-cell.gold .stat-val { color: #f5d76e; }
+.stat-cell.good .stat-val { color: #6fd39b; }
+.stat-cell.bad .stat-val { color: #e96e6e; }
+.stat-val .win { color: #6fd39b; }
+.stat-val .lose { color: #e96e6e; }
+.stat-val .slash { color: rgba(255,255,255,0.25); margin: 0 4px; font-size: 26px; }
+
+/* 段位 / 巅峰分变化 */
+.change-box {
+  padding: 14px 26px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.change-line { font-size: 16px; color: rgba(255,255,255,0.8); }
+.change-line.up { color: #f5d76e; }
+.change-line.down { color: #e96e6e; }
+
+/* 区块 */
+.section { padding: 18px 26px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.section-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title::before {
+  content: "";
+  width: 3px; height: 15px;
+  background: #f5d76e;
+  border-radius: 2px;
+}
+.section-title .tip {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.35);
+}
+.chart-wrap canvas { display: block; width: 100%; height: auto; }
+
+/* 英雄榜 */
+.hero-list { display: flex; flex-direction: column; gap: 9px; }
+.hero-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 9px 14px;
+}
+.hero-rank {
+  font-family: Number, sans-serif;
+  font-size: 16px;
+  color: rgba(255,255,255,0.3);
+  width: 20px;
+  flex-shrink: 0;
+}
+.hero-icon {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 2px solid rgba(245,215,110,0.35);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.hero-main { flex: 1; min-width: 0; }
+.hero-name {
+  font-size: 15px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-bar {
+  height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hero-bar-in {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(245,215,110,0.55), #f5d76e);
+  border-radius: 3px;
+}
+.hero-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.hero-cnt { font-family: Number, sans-serif; font-size: 17px; color: #eef2f8; }
+.hero-cnt i { font-size: 11px; font-style: normal; color: rgba(255,255,255,0.35); margin-left: 2px; }
+.hero-wr { font-family: Number, sans-serif; font-size: 16px; width: 48px; text-align: right; }
+.hero-wr.good { color: #6fd39b; }
+.hero-wr.bad { color: #e96e6e; }
+.hero-grade { color: rgba(255,255,255,0.4); width: 62px; text-align: right; }
+
+/* 数据速览 */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+}
+.fact {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.fact-key { font-size: 13px; color: rgba(255,255,255,0.42); flex-shrink: 0; }
+.fact-val {
+  font-size: 15px;
+  color: #eef2f8;
+  text-align: right;
+  /* 「8.6分 · 影 · 12/3/8」这类长值要能折行，不能撑破格子 */
+  word-break: break-all;
+}
+.fact-val.gold { color: #f5d76e; }
+.fact-val.good { color: #6fd39b; }
+.fact-val.bad { color: #e96e6e; }
+
+/* 活跃时段 */
+.hour-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 92px;
+}
+.hour-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+.hour-bar {
+  width: 100%;
+  min-height: 2px;
+  background: rgba(255,255,255,0.16);
+  border-radius: 3px 3px 0 0;
+}
+.hour-bar.peak { background: linear-gradient(180deg, #f5d76e, rgba(245,215,110,0.4)); }
+.hour-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+/* 时段结论：柱状图下面那句「几点打得多、几点手感好」，日报和群报共用 */
+.hour-note {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(245,215,110,0.07);
+  border-left: 3px solid rgba(245,215,110,0.45);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.5;
+}
+
+.footer {
+  text-align: center;
+  padding: 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.25);
+}
+  </style>
+  <style>
+    /* 段位名比分数长得多（「荣耀王者 67星」），字号要压下来才不换行 */
+    .stat-grid .stat-val.rank { font-size: 24px; }
+    .stat-grid.second .stat-cell { padding: 14px 10px; }
+    .stat-grid.second .stat-val { font-size: 26px; }
+    .stat-val.up { color: #f5d76e; }
+    .stat-val.down { color: #e96e6e; }
+    .stat-val.flat { color: rgba(255,255,255,0.7); }
+
+    /* 跳变提示条：同一营地号切了游戏角色时才出现，必须显眼但不抢主图 */
+    .note-bar {
+      margin: 0 26px 16px;
+      padding: 10px 16px;
+      background: rgba(233,110,110,0.1);
+      border: 1px solid rgba(233,110,110,0.3);
+      border-radius: 10px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.62);
+    }
+
+    /* 模式分布：横排小药丸，排位局高亮（只有它改变段位） */
+    .mode-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .mode-pill {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 7px 15px;
+      font-size: 13px;
+    }
+    .mode-pill.ranked {
+      background: rgba(245,215,110,0.1);
+      border-color: rgba(245,215,110,0.32);
+    }
+    .mode-pill .cnt { font-family: Number, sans-serif; font-size: 15px; color: #f5d76e; }
+    .mode-pill .wr { color: rgba(255,255,255,0.4); font-size: 12px; }
+
+    /* 逐日战况：日期 / 场次 / 排位胜负 / 当日段位 / 变化 */
+    .day-list { display: flex; flex-direction: column; gap: 7px; }
+    .day-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+    .day-date { font-family: Number, sans-serif; font-size: 16px; width: 62px; flex-shrink: 0; }
+    .day-cnt { color: rgba(255,255,255,0.5); width: 92px; flex-shrink: 0; }
+    .day-wl { flex: 1; min-width: 0; }
+    .day-wl .win { color: #6fd39b; }
+    .day-wl .lose { color: #e96e6e; }
+    .day-rank { font-size: 14px; color: rgba(255,255,255,0.75); width: 108px; text-align: right; flex-shrink: 0; }
+    .day-delta { font-family: Number, sans-serif; font-size: 15px; width: 92px; text-align: right; flex-shrink: 0; }
+    .day-delta.up { color: #f5d76e; }
+    .day-delta.down { color: #e96e6e; }
+    .day-delta.flat { color: rgba(255,255,255,0.35); }
+  </style>
+  <style>
+    /* 最近战况：英雄头像 + 模式 + 胜负 + 当时段位 + 这一场的变化 */
+    .match-list { display: flex; flex-direction: column; gap: 8px; }
+    .match-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 8px 14px;
+    }
+    .match-row.casual { opacity: 0.62; }
+    .match-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px solid rgba(245,215,110,0.35);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    /* 英雄名 + 模式名可能很长，别把右边的段位挤出卡片 */
+    .match-main { flex: 1; min-width: 0; }
+    .match-hero { font-size: 15px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .match-meta { font-size: 12px; color: rgba(255,255,255,0.38); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .match-res { font-size: 15px; width: 26px; text-align: center; flex-shrink: 0; }
+    .match-res.win { color: #6fd39b; }
+    .match-res.lose { color: #e96e6e; }
+    .match-res.flat { color: rgba(255,255,255,0.3); }
+    .match-rank { font-size: 14px; color: rgba(255,255,255,0.7); width: 104px; text-align: right; flex-shrink: 0; }
+    .match-delta { font-family: Number, sans-serif; font-size: 15px; width: 84px; text-align: right; flex-shrink: 0; }
+    .match-delta.up { color: #f5d76e; }
+    .match-delta.down { color: #e96e6e; }
+    .match-delta.flat { color: rgba(255,255,255,0.3); }
+
+    .footer {
+      padding: 14px 26px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <!-- 头部 -->
+  <div class="card-header">
+    <img class="avatar" src="{{.Avatar}}" alt="" onerror="this.style.display='none'">
+    <div class="user-info">
+      <h2 class="username">{{.Username}}</h2>
+      <span class="badge">{{.RangeText}}</span>
+      <span class="badge">{{.CoverText}}</span>
+      <span class="badge">{{.Count}} 场排位</span>
+    </div>
+    <div class="report-label">
+      {{.Title}}
+      <span class="sub">{{.SubText}}</span>
+    </div>
+  </div>
+
+  <!-- 四格总览 -->
+  <div class="stat-grid">
+    <div class="stat-cell gold">
+      <div class="stat-val rank">{{.CurrentLabel}}</div>
+      <div class="stat-key">当前段位</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val rank {{.DeltaClass}}">{{.DeltaText}}</div>
+      <div class="stat-key">区间变化</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val rank">{{.PeakLabel}}</div>
+      <div class="stat-key">区间最高</div>
+    </div>
+    <div class="stat-cell {{.WinRateClass}}">
+      <div class="stat-val">{{.WinRate}}%</div>
+      <div class="stat-key">排位胜率</div>
+    </div>
+  </div>
+
+  <div class="stat-grid second">
+    <div class="stat-cell">
+      <div class="stat-val"><span class="win">{{.Win}}</span><span class="slash">/</span><span class="lose">{{.Lose}}</span></div>
+      <div class="stat-key">排位 胜 / 负</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{.StarStepText}}</div>
+      <div class="stat-key">涨星 / 掉星次数</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{.MaxWinStreak}}</div>
+      <div class="stat-key">最长连胜</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{.MaxLoseStreak}}</div>
+      <div class="stat-key">最长连败</div>
+    </div>
+  </div>
+
+  {{if .SegNote}}
+  <div class="note-bar">⚠ {{.SegNote}}</div>
+  {{end}}
+
+  <!-- 段位阶梯图 -->
+  <div class="section">
+    <div class="section-title">
+      段位走势
+      <span class="tip">{{.StartLabel}} → {{.CurrentLabel}}，{{.StepText}}，跨 {{.SpanDays}} 天</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="trendCanvas" width="2754" height="760"></canvas>
+    </div>
+  </div>
+
+  <!-- 模式分布 -->
+  {{if .ModeRows}}
+  <div class="section">
+    <div class="section-title">
+      模式分布
+      <span class="tip">只统计排位赛，这里是单排 / 双排 / 五排这些开黑形态的分布</span>
+    </div>
+    <div class="mode-list">
+      {{range $m := .ModeRows}}
+      <span class="mode-pill {{if $m.Ranked}}ranked{{end}}">
+        {{$m.Mode}}<span class="cnt">{{$m.Count}}</span><span class="wr">胜率 {{$m.WinRate}}%</span>
+      </span>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <!-- 逐日战况 -->
+  {{if .DayRows}}
+  <div class="section">
+    <div class="section-title">
+      逐日战况
+      <span class="tip">变化 = 当天最后一场的段位 − 前一天最后一场的段位</span>
+    </div>
+    <div class="day-list">
+      {{range $d := .DayRows}}
+      <div class="day-row">
+        <span class="day-date">{{$d.Date}}</span>
+        <span class="day-cnt">{{$d.Count}} 场</span>
+        <span class="day-wl"><span class="win">{{$d.Win}} 胜</span> / <span class="lose">{{$d.Lose}} 负</span></span>
+        <span class="day-rank">{{$d.Label}}</span>
+        <span class="day-delta {{$d.DeltaClass}}">{{$d.DeltaText}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <!-- 最近战况 -->
+  {{if .RecentRows}}
+  <div class="section">
+    <div class="section-title">
+      最近 {{len .RecentRows}} 场
+      <span class="tip">段位是打这一场时的快照，变化是与上一场之间的差</span>
+    </div>
+    <div class="match-list">
+      {{range $m := .RecentRows}}
+      <div class="match-row {{if not $m.Ranked}}casual{{end}}">
+        <img class="match-icon" src="{{$m.HeroIcon}}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="match-main">
+          <div class="match-hero">{{$m.HeroName}}</div>
+          <div class="match-meta">{{$m.TimeText}} · {{$m.Mode}} · {{$m.KDA}}</div>
+        </div>
+        <span class="match-res {{$m.ResultClass}}">{{$m.ResultText}}</span>
+        <span class="match-rank">{{$m.Label}}</span>
+        <span class="match-delta {{$m.DeltaClass}}">{{$m.DeltaText}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <div class="footer">{{.FootText}}</div>
+</div>
+
+<script>
+// 段位是离散阶梯量，所以这里画的是**阶梯线**（step-after）而不是 ScoreTrend 那种
+// Catmull-Rom 平滑曲线：段位在两场之间是瞬间跳变的，画成平滑上坡等于凭空编出中间状态。
+// y 值是 utils/rankTrend.js 算好的离散刻度 level（一格一档），不是段位标量本身。
+const trend = {{.TrendJson}}
+const levels = {{.LevelJson}}
+
+if (trend && trend.length > 1) {
+  const c = document.getElementById('trendCanvas')
+  const ctx = c.getContext('2d')
+  const W = c.width, H = c.height
+  const pad = { t: 60, b: 92, l: 250, r: 90 }
+  const plotH = H - pad.t - pad.b
+  const maxLevel = Math.max(...trend.map(t => t.level))
+  // 只有一档（这段时间段位一动没动）时把线画在正中间，否则 0/0 会除爆
+  const yOf = level => (maxLevel > 0
+    ? pad.t + (1 - level / maxLevel) * plotH
+    : pad.t + plotH / 2)
+  const xs = trend.map((_, i) => pad.l + i * (W - pad.l - pad.r) / (trend.length - 1))
+  const ys = trend.map(t => yOf(t.level))
+
+  // 背景网格 + 左侧段位刻度。刻度已在数据层抽到最多 5 档，这里直接一档一线
+  ctx.font = '30px YS,sans-serif'
+  ctx.textAlign = 'right'
+  for (const item of (levels && levels.length ? levels : [])) {
+    const y = yOf(item.level)
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+    ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke()
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.fillText(item.label, pad.l - 20, y + 10)
+  }
+
+  // 按 seg 切段：跳变处（切游戏角色 / 赛季重置）必须断开，连起来就是一条从天上掉下来的直线
+  const segs = []
+  let cur = [0]
+  for (let i = 1; i < trend.length; i++) {
+    if (trend[i].seg !== trend[i - 1].seg) { segs.push(cur); cur = [] }
+    cur.push(i)
+  }
+  segs.push(cur)
+
+  // 阶梯路径：先横着走到下一场的 x，再竖着跳到新段位
+  const stepPath = idxs => {
+    ctx.moveTo(xs[idxs[0]], ys[idxs[0]])
+    for (let k = 1; k < idxs.length; k++) {
+      ctx.lineTo(xs[idxs[k]], ys[idxs[k - 1]])
+      ctx.lineTo(xs[idxs[k]], ys[idxs[k]])
+    }
+  }
+
+  for (const idxs of segs) {
+    if (idxs.length < 2) {
+      // 孤点段（跳变刚好只留一场）：画个点就够，画不出线
+      ctx.beginPath(); ctx.arc(xs[idxs[0]], ys[idxs[0]], 8, 0, Math.PI * 2)
+      ctx.fillStyle = '#f5d76e'; ctx.fill()
+      continue
+    }
+
+    // 填充渐变。底边必须是画布底边，且路径要「阶梯 → 落到底边 → 沿底边回到起点」再 closePath，
+    // 否则 closePath 会从右下角直接连回起点，填充区多出一条穿过全图的斜线（和 ScoreTrend 同一个坑）
+    const grad = ctx.createLinearGradient(0, pad.t, 0, H - pad.b)
+    grad.addColorStop(0, 'rgba(245,215,110,0.3)')
+    grad.addColorStop(1, 'rgba(245,215,110,0.02)')
+    ctx.beginPath()
+    stepPath(idxs)
+    ctx.lineTo(xs[idxs[idxs.length - 1]], H - pad.b)
+    ctx.lineTo(xs[idxs[0]], H - pad.b)
+    ctx.closePath()
+    ctx.fillStyle = grad; ctx.fill()
+
+    ctx.beginPath()
+    stepPath(idxs)
+    ctx.strokeStyle = '#f5d76e'; ctx.lineWidth = 5
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke()
+  }
+
+  // 点：排位局画实心（是它把段位打上去的），其它模式画空心小点，一眼分得清
+  const dotR = trend.length > 30 ? 5 : 7
+  trend.forEach((t, i) => {
+    ctx.beginPath(); ctx.arc(xs[i], ys[i], t.ranked ? dotR : dotR - 2, 0, Math.PI * 2)
+    if (t.ranked) {
+      ctx.fillStyle = '#f5d76e'; ctx.fill()
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 3; ctx.stroke()
+    }
+  })
+
+  // 末点标注当前段位全称：图上刻度是简称，这里给一次完整的
+  const lastI = trend.length - 1
+  ctx.font = '32px YS,sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillStyle = '#f5d76e'
+  ctx.fillText(trend[lastI].full, W - pad.r, ys[lastI] - 22)
+
+  // X 轴日期：首点左对齐、尾点右对齐，避免被画布边缘截断；点多了中间再补一个
+  const fmtDate = i => {
+    const d = new Date(Number(trend[i].time) * 1000)
+    return `${d.getMonth() + 1}-${d.getDate()}`
+  }
+  ctx.font = '30px YS,sans-serif'
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'
+  ctx.textAlign = 'left'
+  ctx.fillText(fmtDate(0), xs[0], H - 20)
+  ctx.textAlign = 'right'
+  ctx.fillText(fmtDate(lastI), xs[lastI], H - 20)
+  if (trend.length >= 8) {
+    const mi = Math.floor(lastI / 2)
+    const midText = fmtDate(mi)
+    // 中点和首尾同一天就别画了：补拉战绩时常出现一天灌进几十场，中点会落在起点那天，
+    // 画出来就是同一个日期在轴上出现两次，看着像画错了
+    if (midText !== fmtDate(0) && midText !== fmtDate(lastI)) {
+      ctx.textAlign = 'center'
+      ctx.fillText(midText, xs[mi], H - 20)
+    }
+  }
+}
+</script>
+</body>
+</html>

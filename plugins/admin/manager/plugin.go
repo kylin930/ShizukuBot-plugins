@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -26,12 +27,13 @@ var durationPattern = regexp.MustCompile(`(\d+)\s*(秒|分钟|分|小时|时|天
 // Definition subscribes to group messages. Admin targets are identified by
 // member_openid because QQ group events do not expose QQ numbers.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "manager",
 		Name:        "群管理",
 		Version:     "1.0.0",
 		Description: "自我禁言、撤回本条消息；管理员可按 openid 禁言/解禁/踢出成员",
 	}, []sdk.EventType{sdk.GroupMessage, sdk.GroupAtMessage}, Handle,
+		[]triggercmd.Command{{Name: "manager", Trigger: "我的ID"}},
 		sdk.WithPermissions("message.recall", "group.manage", "config.read"),
 		sdk.WithConfig(sdk.Schema{
 			Type: "object",

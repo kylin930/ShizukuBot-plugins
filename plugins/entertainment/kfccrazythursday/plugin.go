@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"shizukubot-plugins/internal/triggercmd"
 	"shizukubot/sdk"
 )
 
@@ -20,12 +21,14 @@ var client = &http.Client{Timeout: 10 * time.Second}
 
 // Definition subscribes to the 「疯狂星期四」 trigger.
 func Definition() sdk.Definition {
-	return sdk.EventPlugin(sdk.Meta{
+	return triggercmd.EventPlugin(sdk.Meta{
 		ID:          "kfc-crazy-thursday",
 		Name:        "疯狂星期四",
 		Version:     "1.0.0",
 		Description: "发送「疯狂星期四」，随机获取一段肯德基疯狂星期四文案",
-	}, sdk.MessageEvents, Handle)
+	}, sdk.MessageEvents, Handle, []triggercmd.Command{
+		{Name: "kfc-crazy-thursday", Trigger: "疯狂星期四"},
+	})
 }
 
 // Handle fetches one piece of copy from the upstream API.
@@ -37,7 +40,12 @@ func Handle(ctx context.Context, c sdk.Call) error {
 	if err != nil {
 		return c.Reply(ctx, "获取疯狂星期四文案失败: "+err.Error())
 	}
-	return c.Reply(ctx, text)
+	return c.ReplyKeyboardOrText(ctx, text, moreKeyboard())
+}
+
+// moreKeyboard 「再来一条」按钮，点击后重新触发「疯狂星期四」。
+func moreKeyboard() sdk.Keyboard {
+	return sdk.NewKeyboard(sdk.NewRow(sdk.CommandButton("kfc-more", "再来一条", "疯狂星期四")))
 }
 
 func fetch(ctx context.Context) (string, error) {

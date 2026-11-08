@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{_res_path}}gacha/global-stats.css">
+</head>
+<body>
+  <div class="gs">
+    <header class="hero">
+      <div class="hero-left">
+        <div class="hero-kicker">GLOBAL GACHA</div>
+        <div class="hero-title">{{title}}</div>
+        <div class="hero-meta">
+          <span class="chip">{{providerLabel}}</span>
+          {{if poolPeriod}}<span class="chip chip-red">限定：{{poolPeriod}}</span>{{/if}}
+          {{if weaponPoolPeriod}}<span class="chip chip-amber">武器：{{weaponPoolPeriod}}</span>{{/if}}
+          <span class="meta-time">{{syncTime}}</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="summary">
+      <div class="summary-card">
+        <div class="summary-title">全服概览</div>
+        <div class="summary-grid">
+          <div class="summary-item summary-major"><span>总抽数</span><strong>{{totalPulls}}</strong></div>
+          <div class="summary-item summary-major"><span>统计用户</span><strong>{{totalUsers}}</strong></div>
+          <div class="summary-item summary-major"><span>6星总数</span><strong class="t-red">{{star6Total}}</strong></div>
+          <div class="summary-item"><span>限定6星</span><strong>{{star6Limited}}</strong></div>
+          <div class="summary-item"><span>常驻6星</span><strong>{{star6Standard}}</strong></div>
+          <div class="summary-item"><span>5星总数</span><strong>{{star5Total}}</strong></div>
+          <div class="summary-item"><span>4星总数</span><strong>{{star4Total}}</strong></div>
+          <div class="summary-item summary-major"><span>全池均出</span><strong>{{avgPity}}</strong></div>
+          <div class="summary-item"><span>限定UP均出</span><strong>{{limitedUpAvgPity}}</strong></div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">干员 / 武器</div>
+        <div class="summary-dual">
+          <div class="summary-block">
+            <div class="summary-block-grid">
+              <div class="summary-item summary-major"><span>抽数</span><strong>{{operatorTotal}}</strong></div>
+              <div class="summary-item"><span>6星</span><strong>{{operatorStar6}}</strong></div>
+              <div class="summary-item"><span>均出</span><strong>{{operatorAvg}}</strong></div>
+            </div>
+          </div>
+          <div class="summary-block">
+            <div class="summary-block-grid">
+              <div class="summary-item summary-major"><span>抽数</span><strong>{{weaponTotal}}</strong></div>
+              <div class="summary-item"><span>6星</span><strong>{{weaponStar6}}</strong></div>
+              <div class="summary-item"><span>均出</span><strong>{{weaponAvg}}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{if showUpPanel}}
+    <section class="up-panel {{upPanelClass}}">
+      <div class="up-wrap">
+        {{if currentPoolStats || currentWeaponPoolStats}}
+        <div class="up-stats">
+          {{if currentPoolStats}}
+          <div class="up-stat-group">
+            <div class="up-stat-title">
+              <span>限定池统计</span>
+              {{if currentPoolName}}<em>{{currentPoolName}}</em>{{/if}}
+            </div>
+            {{if upCharNames && upCharNames.length > 0}}
+            <div class="up-inline up-inline-char">
+              <span>限定UP</span>
+              <div class="up-list">
+                {{each upCharNames n idx}}<span class="up-pill">{{n}}</span>{{/each}}
+              </div>
+            </div>
+            {{/if}}
+            <div class="up-stat-grid">
+              <div class="up-stat"><span>总抽</span><strong>{{currentPoolStats.total}}</strong></div>
+              <div class="up-stat"><span>6星</span><strong>{{currentPoolStats.star6}}</strong></div>
+              <div class="up-stat"><span>UP</span><strong>{{currentPoolStats.up}}</strong></div>
+              <div class="up-stat"><span>UP均出</span><strong>{{currentPoolStats.upAvg}}</strong></div>
+              <div class="up-stat"><span>6星均出</span><strong>{{currentPoolStats.star6Avg}}</strong></div>
+            </div>
+          </div>
+          {{/if}}
+          {{if currentWeaponPoolStats}}
+          <div class="up-stat-group up-stat-group-weapon">
+            <div class="up-stat-title">
+              <span>武器池统计</span>
+              {{if currentWeaponPoolName}}<em>{{currentWeaponPoolName}}</em>{{/if}}
+            </div>
+            {{if upWeaponNames && upWeaponNames.length > 0}}
+            <div class="up-inline up-inline-weapon">
+              <span>武器UP</span>
+              <div class="up-list">
+                {{each upWeaponNames n idx}}<span class="up-pill up-pill-weapon">{{n}}</span>{{/each}}
+              </div>
+            </div>
+            {{/if}}
+            <div class="up-stat-grid">
+              <div class="up-stat"><span>总抽</span><strong>{{currentWeaponPoolStats.total}}</strong></div>
+              <div class="up-stat"><span>6星</span><strong>{{currentWeaponPoolStats.star6}}</strong></div>
+              <div class="up-stat"><span>UP</span><strong>{{currentWeaponPoolStats.up}}</strong></div>
+              <div class="up-stat"><span>UP均出</span><strong>{{currentWeaponPoolStats.upAvg}}</strong></div>
+              <div class="up-stat"><span>6星均出</span><strong>{{currentWeaponPoolStats.star6Avg}}</strong></div>
+            </div>
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
+        {{if !currentPoolStats && !currentWeaponPoolStats}}
+        <div class="up-groups">
+          {{if upCharNames && upCharNames.length > 0}}
+          <div class="up-group">
+            <span class="up-group-label up-group-label-char">限定UP</span>
+            <div class="up-list">
+              {{each upCharNames n idx}}<span class="up-pill">{{n}}</span>{{/each}}
+            </div>
+          </div>
+          {{/if}}
+          {{if upWeaponNames && upWeaponNames.length > 0}}
+          <div class="up-group">
+            <span class="up-group-label up-group-label-weapon">武器UP</span>
+            <div class="up-list">
+              {{each upWeaponNames n idx}}<span class="up-pill up-pill-weapon">{{n}}</span>{{/each}}
+            </div>
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
+      </div>
+    </section>
+    {{/if}}
+
+    {{if providerCards && providerCards.length > 0}}
+    <section class="mini-section">
+      <div class="section-title">平台统计</div>
+      <div class="mini-grid">
+        {{each providerCards p idx}}
+        <div class="mini-card">
+          <div class="mini-title">{{p.label}}</div>
+          <div class="mini-list">
+            <div class="mini-row"><span>用户</span><strong>{{p.totalUsers}}</strong></div>
+            <div class="mini-row"><span>总抽</span><strong>{{p.totalPulls}}</strong></div>
+            <div class="mini-row"><span>6星</span><strong>{{p.star6Total}}</strong></div>
+            <div class="mini-row"><span>5星</span><strong>{{p.star5Total}}</strong></div>
+            <div class="mini-row"><span>4星</span><strong>{{p.star4Total}}</strong></div>
+            <div class="mini-row"><span>均出</span><strong>{{p.avgPity}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员抽</span><strong>{{p.operatorTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员6星</span><strong>{{p.operatorStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员均出</span><strong>{{p.operatorAvg}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器抽</span><strong>{{p.weaponTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器6星</span><strong>{{p.weaponStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器均出</span><strong>{{p.weaponAvg}}</strong></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </section>
+    {{/if}}
+
+    {{if channelCards && channelCards.length > 0}}
+    <section class="mini-section">
+      <div class="section-title">渠道统计</div>
+      <div class="mini-grid">
+        {{each channelCards c idx}}
+        <div class="mini-card">
+          <div class="mini-title">{{c.label}}</div>
+          <div class="mini-list">
+            <div class="mini-row"><span>用户</span><strong>{{c.totalUsers}}</strong></div>
+            <div class="mini-row"><span>总抽</span><strong>{{c.totalPulls}}</strong></div>
+            <div class="mini-row"><span>6星</span><strong>{{c.star6Total}}</strong></div>
+            <div class="mini-row"><span>5星</span><strong>{{c.star5Total}}</strong></div>
+            <div class="mini-row"><span>4星</span><strong>{{c.star4Total}}</strong></div>
+            <div class="mini-row"><span>均出</span><strong>{{c.avgPity}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员抽</span><strong>{{c.operatorTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员6星</span><strong>{{c.operatorStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员均出</span><strong>{{c.operatorAvg}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器抽</span><strong>{{c.weaponTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器6星</span><strong>{{c.weaponStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器均出</span><strong>{{c.weaponAvg}}</strong></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </section>
+    {{/if}}
+
+    {{if regionCards && regionCards.length > 0}}
+    <section class="mini-section">
+      <div class="section-title">国际服区域</div>
+      <div class="mini-grid">
+        {{each regionCards r idx}}
+        <div class="mini-card">
+          <div class="mini-title">{{r.label}}</div>
+          <div class="mini-list">
+            <div class="mini-row"><span>用户</span><strong>{{r.totalUsers}}</strong></div>
+            <div class="mini-row"><span>总抽</span><strong>{{r.totalPulls}}</strong></div>
+            <div class="mini-row"><span>6星</span><strong>{{r.star6Total}}</strong></div>
+            <div class="mini-row"><span>5星</span><strong>{{r.star5Total}}</strong></div>
+            <div class="mini-row"><span>4星</span><strong>{{r.star4Total}}</strong></div>
+            <div class="mini-row"><span>均出</span><strong>{{r.avgPity}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员抽</span><strong>{{r.operatorTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员6星</span><strong>{{r.operatorStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>干员均出</span><strong>{{r.operatorAvg}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器抽</span><strong>{{r.weaponTotal}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器6星</span><strong>{{r.weaponStar6}}</strong></div>
+            <div class="mini-row mini-sub"><span>武器均出</span><strong>{{r.weaponAvg}}</strong></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </section>
+    {{/if}}
+
+    <section class="pool-grid">
+      {{each poolSections sec idx}}
+      <div class="pool-card {{if sec.key === 'limited' || sec.key === 'weapon' || sec.key === 'standard' || sec.key === 'beginner'}}pool-full{{/if}}">
+        <div class="pool-head">
+          <div class="pool-title">{{sec.label}}</div>
+          <div class="pool-total">{{sec.total}} 抽</div>
+        </div>
+        <div class="pool-metrics">
+          <div class="metric"><span>6星</span><strong class="t-red">{{sec.star6}}</strong></div>
+          <div class="metric"><span>5星</span><strong class="t-amber">{{sec.star5}}</strong></div>
+          <div class="metric"><span>4星</span><strong class="t-purple">{{sec.star4}}</strong></div>
+          <div class="metric"><span>均出</span><strong>{{sec.avgPity}}</strong></div>
+        </div>
+        <div class="pool-metrics pool-metrics-secondary">
+          <div class="metric"><span>限定6星</span><strong>{{sec.star6Limited}}</strong></div>
+          <div class="metric"><span>常驻6星</span><strong>{{sec.star6Standard}}</strong></div>
+          <div class="metric"><span>UP均出</span><strong>{{sec.upAvgPity}}</strong></div>
+          <div class="metric"><span>6星率</span><strong>{{sec.star6Rate}}</strong></div>
+        </div>
+
+        {{if sec.distributionList && sec.distributionList.length > 0}}
+        <div class="dist">
+          {{each sec.distributionList d dIdx}}
+          <div class="dist-row">
+            <span class="dist-label">{{d.range}}</span>
+            <div class="dist-bar">
+              <div class="dist-fill" style="width:{{d.pct}}%;"></div>
+            </div>
+            <span class="dist-count">{{d.count}}</span>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+
+        {{if sec.showRanking}}
+        <div class="rank-grid">
+          <div class="rank-col">
+            <div class="rank-title">6星排名</div>
+            {{each sec.rankingList6 r rIdx}}
+            <div class="rank-row">
+              <span class="rank-no">{{rIdx + 1}}</span>
+              <span class="rank-name">{{r.name}}{{if r.isUp}}<i class="rank-up">UP</i>{{/if}}</span>
+              <span class="rank-count">{{r.count}}</span>
+              <div class="rank-bar"><div class="rank-fill rank-fill-6" style="width:{{r.percent}}%;"></div></div>
+            </div>
+            {{/each}}
+          </div>
+          <div class="rank-col">
+            <div class="rank-title">5星排名</div>
+            {{each sec.rankingList5 r rIdx}}
+            <div class="rank-row">
+              <span class="rank-no">{{rIdx + 1}}</span>
+              <span class="rank-name">{{r.name}}</span>
+              <span class="rank-count">{{r.count}}</span>
+              <div class="rank-bar"><div class="rank-fill rank-fill-5" style="width:{{r.percent}}%;"></div></div>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+      </div>
+      {{/each}}
+    </section>
+
+    <footer class="footer">
+      <div class="footer-note">统计口径：仅计算非免费抽卡数据</div>
+      {{if periodHint}}<div class="footer-hint">{{periodHint}}</div>{{/if}}
+      <div class="footer-text">{{@copyright}}</div>
+    </footer>
+  </div>
+</body>
+</html>
