@@ -87,7 +87,7 @@ ShizukuBot-plugins/
 本仓库的 `go.mod` 通过 `replace shizukubot => ../shizukubot` 指向同级框架，因此也可以直接在本仓库运行测试：
 
 ```powershell
-cd d:\ShizukuBot-plugins
+cd ShizukuBot-plugins
 go test ./plugins/...
 ```
 
@@ -464,7 +464,7 @@ wife / llm 的额外说明：
 ## 开发与测试
 
 ```sh
-cd d:\ShizukuBot-plugins
+cd ShizukuBot-plugins
 
 # 本仓库只测试插件（需要同级框架仓库）
 go test ./plugins/...

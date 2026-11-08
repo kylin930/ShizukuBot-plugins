@@ -62,13 +62,13 @@ func defaultConfig() config {
 		CommandName:     "保存图片",
 		CheckDuplicate:  true,
 		SavePaths: []savePath{
-			{Name: "第一个", Path: `C:\Program Files`},
-			{Name: "第二个", Path: `E:\Music\nums`},
+			{Name: "第一个", Path: "images"},
+			{Name: "第二个", Path: "images-2"},
 		},
 		AutoRenameRules: defaultRules,
 		GroupMappings: []groupMapping{
-			{Enable: true, GroupList: "114514", Count: 2, DefaultSavePath: `C:\Program Files`},
-			{Enable: true, GroupList: "private:1919810", Count: 2, DefaultSavePath: `C:\Program Files`},
+			{Enable: true, GroupList: "114514", Count: 2, DefaultSavePath: "images"},
+			{Enable: true, GroupList: "private:1919810", Count: 2, DefaultSavePath: "images"},
 		},
 	}
 }
@@ -120,8 +120,8 @@ func configSchema() sdk.Schema {
 			"savePaths": {
 				Type:        "array",
 				Description: "图片保存路径的名称和地址映射",
-				Default: json.RawMessage(`[{"name":"第一个","path":"C:\\Program Files"},` +
-					`{"name":"第二个","path":"E:\\Music\\nums"}]`),
+				Default: json.RawMessage(`[{"name":"第一个","path":"images"},` +
+					`{"name":"第二个","path":"images-2"}]`),
 				Items: &sdk.Schema{Type: "object", Properties: map[string]sdk.Schema{
 					"name": {Type: "string", Description: "文件夹备注"},
 					"path": {Type: "string", Description: "文件夹路径"},
@@ -149,9 +149,9 @@ func configSchema() sdk.Schema {
 				Type:        "array",
 				Description: "各群组自动保存的路径映射（私信使用 private: 前缀）",
 				Default: json.RawMessage(`[{"enable":true,"groupList":"114514","count":2,` +
-					`"defaultsavepath":"C:\\Program Files"},` +
+					`"defaultsavepath":"images"},` +
 					`{"enable":true,"groupList":"private:1919810","count":2,` +
-					`"defaultsavepath":"C:\\Program Files"}]`),
+					`"defaultsavepath":"images"}]`),
 				Items: &sdk.Schema{Type: "object", Properties: map[string]sdk.Schema{
 					"enable":          {Type: "boolean", Description: "勾选后启用自动保存"},
 					"groupList":       {Type: "string", Description: "需要监听的群组ID"},
@@ -410,6 +410,11 @@ func (r *runner) finalFileName(flow *saveFlow) string {
 }
 
 func (r *runner) saveWithPath(flow *saveFlow, p savePath) error {
+	if p.Path != "" {
+		if err := os.MkdirAll(p.Path, 0o755); err != nil {
+			return r.reply("保存图片时出错：" + err.Error())
+		}
+	}
 	firstMessageSent := false
 	var duplicates []string
 	for _, url := range flow.images {
